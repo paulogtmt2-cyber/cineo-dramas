@@ -21,15 +21,17 @@ public class MainActivity extends Activity {
  interface Done { void run(JSONObject result) throws Exception; }
  JSONObject obj(Object... pairs) throws Exception { JSONObject o=new JSONObject(); for(int i=0;i<pairs.length;i+=2)o.put((String)pairs[i],pairs[i+1]); return o; }
  @Override public void onCreate(Bundle b){super.onCreate(b); base=getPreferences(0).getString("server",""); if(base.isEmpty())settings();else login();}
+ int dp(int value){return Math.round(value*getResources().getDisplayMetrics().density);}
  void page(String title,String subtitle){
   ScrollView scroll=new ScrollView(this); scroll.setFillViewport(true); scroll.setBackgroundColor(Color.rgb(13,14,21));
-  body=new LinearLayout(this);body.setOrientation(1);body.setPadding(24,40,24,32);scroll.addView(body);setContentView(scroll);
+  body=new LinearLayout(this);body.setOrientation(1);body.setPadding(dp(20),dp(24),dp(20),dp(24));scroll.addView(body);setContentView(scroll);
+  scroll.setOnApplyWindowInsetsListener((v,insets)->{v.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;});scroll.requestApplyInsets();
   text("CINEO  /  DRAMAS",14,Color.rgb(255,80,108));text(title,30,Color.WHITE);text(subtitle,15,Color.LTGRAY);
   message=text("",14,Color.rgb(255,143,157));
  }
- TextView text(String s,int size,int color){ TextView v=new TextView(this);v.setText(s);v.setTextSize(size);v.setTextColor(color);v.setPadding(0,8,0,12);body.addView(v);return v; }
+ TextView text(String s,int size,int color){ TextView v=new TextView(this);v.setText(s);v.setTextSize(size);v.setTextColor(color);v.setPadding(0,dp(8),0,dp(12));body.addView(v);return v; }
  EditText field(String hint,boolean secret){EditText e=new EditText(this);e.setHint(hint);e.setTextColor(Color.WHITE);e.setHintTextColor(Color.GRAY);e.setSingleLine(true);if(secret)e.setInputType(129);body.addView(e);return e;}
- void button(String label,Runnable action){Button b=new Button(this);b.setText(label);b.setAllCaps(false);b.setTextColor(Color.WHITE);GradientDrawable bg=new GradientDrawable();bg.setColor(Color.rgb(170,35,72));bg.setCornerRadius(24);b.setBackground(bg);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,56);lp.setMargins(0,8,0,8);body.addView(b,lp);b.setOnClickListener(v->action.run());}
+ void button(String label,Runnable action){Button b=new Button(this);b.setText(label);b.setAllCaps(false);b.setTextColor(Color.WHITE);GradientDrawable bg=new GradientDrawable();bg.setColor(Color.rgb(170,35,72));bg.setCornerRadius(dp(12));b.setBackground(bg);LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);b.setMinHeight(dp(56));b.setPadding(dp(16),dp(12),dp(16),dp(12));lp.setMargins(0,dp(8),0,dp(8));body.addView(b,lp);b.setOnClickListener(v->action.run());}
  void safe(Throwing r){try{r.run();}catch(Exception e){message.setText("Não foi possível concluir. "+e.getMessage());}}
  interface Throwing {void run() throws Exception;}
  void call(String method,String path,JSONObject payload,Done done){
@@ -66,7 +68,7 @@ public class MainActivity extends Activity {
   }
   button("Voltar",()->list(origin));call("GET","/shows/"+id+"/episodes",null,r->{JSONArray a=r.getJSONArray("items");if(a.length()==0)text("Adicione seu primeiro episódio.",16,Color.LTGRAY);for(int i=0;i<a.length();i++){JSONObject e=a.getJSONObject(i);button(e.getString("title"),()->safe(()->play(e,s,origin)));}});
  });}
- void play(JSONObject e,JSONObject s,String origin)throws Exception{page(e.getString("title"),"Toque no vídeo para exibir os controles.");VideoView video=new VideoView(this);body.addView(video,new LinearLayout.LayoutParams(-1,650));MediaController controls=new MediaController(this);controls.setAnchorView(video);video.setMediaController(controls);Map<String,String> headers=new HashMap<>();headers.put("Authorization","Bearer "+token);video.setVideoURI(Uri.parse(base+e.getString("url")),headers);video.setOnPreparedListener(mp->video.start());video.setOnErrorListener((mp,a,b)->{message.setText("Não foi possível reproduzir este MP4.");return true;});button("Voltar aos episódios",()->{video.stopPlayback();details(s,origin);});}
+ void play(JSONObject e,JSONObject s,String origin)throws Exception{page(e.getString("title"),"Toque no vídeo para exibir os controles.");VideoView video=new VideoView(this);body.addView(video,new LinearLayout.LayoutParams(-1,dp(380)));MediaController controls=new MediaController(this);controls.setAnchorView(video);video.setMediaController(controls);Map<String,String> headers=new HashMap<>();headers.put("Authorization","Bearer "+token);video.setVideoURI(Uri.parse(base+e.getString("url")),headers);video.setOnPreparedListener(mp->video.start());video.setOnErrorListener((mp,a,b)->{message.setText("Não foi possível reproduzir este MP4.");return true;});button("Voltar aos episódios",()->{video.stopPlayback();details(s,origin);});}
  @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);if(request!=7||result!=RESULT_OK||data==null)return;Uri uri=data.getData();int sid=selectedId;String title=episodeTitle;message.setText("Preparando vídeo…");io.execute(()->{try(InputStream in=getContentResolver().openInputStream(uri)){ByteArrayOutputStream bytes=new ByteArrayOutputStream();byte[] buf=new byte[65536];int n;while((n=in.read(buf))!=-1){if(bytes.size()+n>25*1024*1024)throw new IOException("Escolha um MP4 de até 25 MB.");bytes.write(buf,0,n);}JSONObject payload=obj("title",title,"video",android.util.Base64.encodeToString(bytes.toByteArray(),android.util.Base64.NO_WRAP));runOnUiThread(()->call("POST","/shows/"+sid+"/episodes",payload,r->list("/mine")));}catch(Exception e){runOnUiThread(()->message.setText("Não foi possível ler o vídeo. "+e.getMessage()));}});}
  @Override protected void onDestroy(){super.onDestroy();io.shutdown();}
 }

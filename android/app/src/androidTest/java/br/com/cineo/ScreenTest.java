@@ -12,13 +12,15 @@ import static org.junit.Assert.*;
 @RunWith(AndroidJUnit4.class)
 public class ScreenTest {
  @Rule public ActivityTestRule<MainActivity> rule=new ActivityTestRule<>(MainActivity.class);
+ MainActivity current(){final MainActivity[] found={null};Runnable resolve=()->{for(android.app.Activity activity:androidx.test.runner.lifecycle.ActivityLifecycleMonitorRegistry.getInstance().getActivitiesInStage(androidx.test.runner.lifecycle.Stage.RESUMED))if(activity instanceof MainActivity)found[0]=(MainActivity)activity;if(found[0]==null)found[0]=rule.getActivity();};if(android.os.Looper.myLooper()==android.os.Looper.getMainLooper())resolve.run();else InstrumentationRegistry.getInstrumentation().runOnMainSync(resolve);return found[0];}
  void ui(Runnable r){InstrumentationRegistry.getInstrumentation().runOnMainSync(r);InstrumentationRegistry.getInstrumentation().waitForIdleSync();}
- void settled()throws Exception{for(int i=0;i<100;i++){final boolean[] running={true};ui(()->running[0]=rule.getActivity().busy);if(!running[0])return;Thread.sleep(100);}fail("Screen request did not finish");}
- void capture(String name)throws Exception{settled();Thread.sleep(name.equals("01-login")?1500:400);Bitmap image=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();assertNotNull(image);File dir=new File(rule.getActivity().getExternalFilesDir(null),"screens");assertTrue(dir.exists()||dir.mkdirs());try(FileOutputStream out=new FileOutputStream(new File(dir,name+".png"))){image.compress(Bitmap.CompressFormat.PNG,100,out);}image.recycle();ui(()->assertTrue("Top system inset must be retained on every screen",rule.getActivity().root.getPaddingTop()>0));}
+ void settled()throws Exception{for(int i=0;i<100;i++){final boolean[] running={true};ui(()->running[0]=current().busy);if(!running[0])return;Thread.sleep(100);}fail("Screen request did not finish");}
+ void capture(String name)throws Exception{settled();Thread.sleep(name.equals("01-login")?1500:400);Bitmap image=InstrumentationRegistry.getInstrumentation().getUiAutomation().takeScreenshot();assertNotNull(image);File dir=new File(current().getExternalFilesDir(null),"screens");assertTrue(dir.exists()||dir.mkdirs());try(FileOutputStream out=new FileOutputStream(new File(dir,name+".png"))){image.compress(Bitmap.CompressFormat.PNG,100,out);}image.recycle();ui(()->assertTrue("Top system inset must be retained on every screen",current().root.getPaddingTop()>0));}
  android.view.View find(android.view.View v,String text){if(v instanceof TextView){TextView t=(TextView)v;if(text.contentEquals(t.getText())||(t.getHint()!=null&&text.contentEquals(t.getHint())))return v;}if(v instanceof android.view.ViewGroup){android.view.ViewGroup g=(android.view.ViewGroup)v;for(int i=0;i<g.getChildCount();i++){android.view.View found=find(g.getChildAt(i),text);if(found!=null)return found;}}return null;}
  @Test public void screenLayoutsAndValidation()throws Exception{
-  MainActivity a=rule.getActivity();capture("01-login");assertEquals("login",a.screen);
-  ui(()->a.login(true));capture("02-register");
+  Thread.sleep(2000);capture("01-login");assertEquals("login",current().screen);
+  ui(()->current().login(true));capture("02-register");
+  final MainActivity a=current();
   JSONObject show=new JSONObject().put("id",1).put("title","Asfalto e Segredos").put("synopsis","Uma história de escolhas, encontros e novos caminhos.").put("genre","Drama").put("rating","14").put("status","approved").put("cover_url","android.resource://br.com.cineo/"+R.drawable.cinema_login);
   JSONObject draft=new JSONObject(show.toString()).put("id",2).put("title","Entre dois mundos").put("status","draft");
   JSONObject pending=new JSONObject(show.toString()).put("id",3).put("title","Céu de Agosto").put("status","pending");

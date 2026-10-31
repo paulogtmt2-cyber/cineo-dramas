@@ -27,6 +27,10 @@ public class ScreenTest {
    if(path.endsWith("/episodes"))return a.obj("items",episodes);
    if(path.startsWith("/admin"))return a.obj("items",new JSONArray().put(pending),"next",JSONObject.NULL);
    if(path.equals("/mine"))return a.obj("items",new JSONArray().put(draft).put(pending),"next",JSONObject.NULL);
+   if(path.contains("/social"))return a.obj("likes",payload!=null&&payload.optBoolean("liked")?1:0,"liked",payload!=null&&payload.optBoolean("liked"),"saved",false,"comments",1);
+   if(path.endsWith("/save"))return a.obj("saved",payload==null||payload.optBoolean("saved"));
+   if(path.contains("/comments"))return a.obj("items",new JSONArray().put(a.obj("id",1,"author_name","Espectador","body","Gostei desta história!","created_at","2026-10-31T12:00:00Z")),"next",JSONObject.NULL);
+   if(path.equals("/saved"))return a.obj("items",new JSONArray().put(show),"next",JSONObject.NULL);
    if(path.equals("/catalog"))return a.obj("items",new JSONArray().put(show),"next",JSONObject.NULL);
    throw new IOException("Unexpected test request: "+path);
   };a.catalog(false);});capture("03-home");assertEquals("home",a.screen);
@@ -48,6 +52,14 @@ public class ScreenTest {
   JSONArray playable=new JSONArray().put(new JSONObject().put("id",99).put("title","Teste do player").put("url",sample.toURI().toString()));
   ui(()->a.play(show,playable,0,"catalog"));
   final boolean[] prepared={false};for(int i=0;i<100&&!prepared[0];i++){ui(()->prepared[0]=a.video!=null&&a.video.getDuration()>0);Thread.sleep(100);}assertTrue("Player must decode H264 MP4",prepared[0]);capture("18-player");
+  ui(()->{assertNotNull(a.media);a.togglePlayback();assertFalse(a.video.isPlaying());a.seekBy(10000);});Thread.sleep(500);
+  ui(()->{assertTrue("Seek must advance playback",a.video.getCurrentPosition()>5000);a.togglePlayback();a.fullscreenPlayer();});capture("19-fullscreen");
+  ui(()->{assertNotNull(a.fullDialog);a.fullDialog.dismiss();});Thread.sleep(700);
+  ui(()->{assertNotNull(a.video);assertTrue("Player survives fullscreen",a.video.getDuration()>0);a.toggleLike();});Thread.sleep(600);ui(()->assertTrue("Like state returned by server",a.liked));
+  ui(()->a.toggleSocialSave());Thread.sleep(600);ui(()->assertTrue("Save state returned by server",a.socialSaved));
+  ui(()->a.comments());Thread.sleep(600);capture("20-comments");ui(()->a.commentsDialog.dismiss());
+  ui(()->a.episodeMenu());capture("21-episodes");InstrumentationRegistry.getInstrumentation().getUiAutomation().performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK);
+
   ui(()->{a.clearSession();a.login(false);});
  }
 }

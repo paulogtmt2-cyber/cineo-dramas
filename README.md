@@ -1,60 +1,42 @@
-# Cineo Dramas — primeira base Android 0.1
+# Cineo / Dramas — Android 0.2
 
-Projeto inicial nativo em Java, interface em português e API Python sem dependências externas. Não é uma plataforma pronta para lançamento. Nenhum servidor foi contratado ou publicado e nenhum APK foi compilado nesta entrega.
+Aplicativo Android nativo em português para assistir e publicar séries, novelas e mini dramas independentes. O catálogo mostra apenas produções aprovadas. O backend ativo é a Edge Function `cineo` do Supabase; o servidor Python na pasta `backend` é um protótipo anterior e não é necessário para este APK.
 
-## O que está implementado
-- Cadastro e login com senha derivada por scrypt; sessões de 24 horas.
-- Criador cadastra produção com título e sinopse, adiciona episódios MP4 de até 25 MB e confirma autorização de distribuição.
-- Fluxo rascunho → em análise → aprovado ou reprovado com motivo.
-- Painel de análise visível para administradores e protegido também no servidor.
-- Catálogo consulta somente produções aprovadas.
-- Vídeos pendentes acessíveis apenas ao autor e administrador, inclusive na rota de mídia.
-- Reprodução com controles nativos e suporte HTTP Range no servidor.
-- Bloqueio de alterações durante análise ou após aprovação; reprovados podem adicionar episódios e reenviar.
-- Registro de decisões de moderação e logout que invalida a sessão.
+## Experiência implementada
 
-## Executar o servidor de desenvolvimento
-Requer Python 3.10 ou superior.
+- Login, cadastro, reenvio de confirmação e alteração de senha com verificação da senha atual.
+- Sessão com renovação e refresh token criptografado pelo Android Keystore. Nenhuma senha ou chave de serviço no APK.
+- Início com destaque, catálogo em duas colunas, filtros por gênero e busca por título/sinopse.
+- Favoritos, nome de exibição e progresso por conta, salvos **neste aparelho**.
+- Detalhes, capa, sinopse, classificação e episódios; player com controles, avanço/retrocesso de 10 segundos, próximo episódio e tela cheia.
+- Estúdio do criador: criar/editar rascunho, escolher capa, enviar MP4 e acompanhar análise e justificativas.
+- Administração: contadores reais, filas por situação, prévia dos episódios, aprovação e reprovação com motivo.
+- Estados vazios, mensagens em português e proteção contra respostas atrasadas de uma tela anterior.
 
-```sh
-cd backend
-python server.py
-```
+## Fluxo e permissões
 
-O servidor escuta apenas em 127.0.0.1:8080. Para conectar um celular, um operador precisa hospedar esta API atrás de HTTPS e configurar o domínio no aplicativo. Não há credenciais, domínio ou hospedagem fictícios embutidos. Não exponha diretamente o servidor HTTP de desenvolvimento.
+Rascunho → Em análise → Publicada ou Correções solicitadas. Corrigir uma produção reprovada a devolve a rascunho. Durante a análise, a edição é bloqueada no servidor e no banco. Produções aprovadas ficam imutáveis nesta versão; não há ainda revisão de novos episódios de uma produção já publicada.
 
-Cadastre sua conta e atribua o papel de administrador **no servidor**, com o mesmo diretório de dados:
+As funções SQL de transição e edição são SECURITY INVOKER e executáveis apenas pelo service_role. A Edge Function autentica o token e verifica propriedade/administrador. Vídeos e capas usam buckets privados e URLs assinadas de uma hora. A função não exige JWT na camada do gateway porque login e cadastro são públicos; todas as rotas privadas validam o usuário internamente.
 
-```sh
-python server.py --admin seu-email@example.com
-```
+## Limites claros
 
-Saia e entre novamente no app. Outras contas continuam como criadores; não existe promoção a administrador pelo aplicativo.
+- MP4 até 25 MiB por episódio. Recomenda-se H.264/AAC; não há transcodificação no servidor.
+- Capas JPEG até 2 MiB; o app redimensiona a imagem antes do envio.
+- Upload em primeiro plano, sem retomada após interrupção. Não fechar o app durante o envio.
+- Favoritos e progresso não sincronizam entre aparelhos. Não há notificações push, comentários, download offline ou legendas automáticas.
+- Excluir permanentemente produções/arquivos não faz parte desta versão.
+- O projeto Supabase usa o plano gratuito e seus limites; não há promessa de armazenamento ou tráfego ilimitados.
+- As séries dos mockups são ilustrativas. A conta possui um rascunho técnico privado de 2 segundos para verificação, que não foi publicado.
 
-## Compilar Android
-Abra a pasta android no Android Studio com JDK 17 e SDK 35. O projeto usa Android Gradle Plugin 8.7.3 e Gradle 8.9. O wrapper binário não está incluído. Com Gradle 8.9 instalado:
+## Build e testes
 
-```sh
-gradle -p android assembleDebug
-```
+Java 17, Android SDK 35, Gradle 8.9. `gradle -p android assembleDebug assembleDebugAndroidTest` compila o aplicativo e o pacote de testes. GitHub Actions inicia Android 15/API 35 em um Pixel 6 virtual e executa o teste de telas e reprodução com fixtures somente no pacote de testes. O script `ci/android-ui.sh` guarda capturas e exige sucesso antes de disponibilizar o APK.
 
-Saída: android/app/build/outputs/apk/debug/app-debug.apk.
+Validação real do backend em 31/10/2026: login e role admin, renovação de sessão, catálogo/produções/contadores, envio e leitura assinada de capa e MP4, declaração de direitos obrigatória, envio para fila, bloqueio de edição pendente, reprovação com motivo, correção para rascunho e ausência de rascunhos no catálogo. A aprovação e a rejeição de um ator não autorizado foram verificadas em uma transação revertida, sem publicar conteúdo de teste.
 
-Alternativa sem usar o computador local: coloque o conteúdo desta pasta em um repositório GitHub e execute manualmente o workflow “Gerar APK de teste”. O workflow está preparado, mas não foi executado nem validado nesta entrega. Um APK de produção exige chave de assinatura própria.
+A verificação de senhas comprometidas do Supabase continua desativada na configuração da conta. Referência: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
 
-## Testes executados
-```sh
-cd backend
-python -m unittest -v
-```
-9 testes passaram: aprovação, bloqueio de autoaprovação, privacidade dos episódios, bloqueio de edição pendente, reprovação e reenvio, envio sem episódios, impedimento de escolha de papel no cadastro, logout e decisão duplicada.
+## Instalação
 
-O SDK Android não está disponível no ambiente desta entrega: compilação, instalação, layout e reprodução em celular ainda precisam de validação. Os testes são da lógica da API; não comprovam funcionamento do app inteiro.
-
-## Antes do lançamento público
-Faltam hospedagem real e domínio HTTPS, armazenamento de vídeo escalável, upload retomável e em segundo plano, validação/transcodificação de vídeo (o MVP apenas verifica tamanho e assinatura MP4), limites por conta, proteção contra tentativas de login, recuperação de senha e verificação de email, remoção/substituição de episódios, revisões de produções já aprovadas, capas, busca, favoritos, denúncias, exclusão de conta, políticas aplicáveis e testes em aparelhos reais.
-
-Nesta base, a sessão permanece só em memória e é necessário entrar novamente ao reabrir o processo. O envio usa base64 e limita os vídeos a 25 MB; não é apropriado para episódios grandes ou tráfego público. Não há monetização, notificações push, catálogo fictício ou obras de terceiros incluídas.
-
-Referência Android usada para seleção de documentos:
-https://developer.android.com/training/data-storage/shared/documents-files
+O artefato `Cineo-Dramas-APK` contém um APK de teste. A chave de debug passa a ser reutilizada por cache do workflow, mas pode ser diferente da versão 0.1 já instalada. Se Android informar conflito de assinatura, remover a versão antiga e instalar a nova resolve; a conta e produções continuam no Supabase. A distribuição pela Play Store requer assinatura de release privada e preparação própria.

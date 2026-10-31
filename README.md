@@ -7,7 +7,7 @@ Aplicativo Android nativo em português para assistir e publicar séries, novela
 - Login, cadastro, reenvio de confirmação e alteração de senha com verificação da senha atual.
 - Sessão com renovação e refresh token criptografado pelo Android Keystore. Nenhuma senha ou chave de serviço no APK.
 - Início com destaque, catálogo em duas colunas, filtros por gênero e busca por título/sinopse.
-- Favoritos, nome de exibição e progresso por conta, salvos **neste aparelho**.
+- Favoritos, nome de exibição, foto de perfil e progresso por conta, salvos **neste aparelho**.
 - Detalhes, capa, sinopse, classificação e episódios; player com controles, avanço/retrocesso de 10 segundos, próximo episódio e tela cheia.
 - Estúdio do criador: criar/editar rascunho, escolher capa, enviar MP4 e acompanhar análise e justificativas.
 - Administração: contadores reais, filas por situação, prévia dos episódios, aprovação e reprovação com motivo.

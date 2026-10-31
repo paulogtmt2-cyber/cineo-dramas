@@ -1,0 +1,13 @@
+<resources>
+ <color name="cineo_background">#090D14</color>
+ <style name="Theme.Cineo" parent="android:style/Theme.Material.NoActionBar">
+  <item name="android:fontFamily">sans</item>
+  <item name="android:forceDarkAllowed">false</item>
+  <item name="android:colorAccent">#F20D46</item>
+  <item name="android:windowBackground">#090D14</item>
+  <item name="android:statusBarColor">#090D14</item>
+  <item name="android:navigationBarColor">#090D14</item>
+  <item name="android:windowLightStatusBar">false</item>
+  <item name="android:windowLightNavigationBar">false</item>
+ </style>
+</resources>

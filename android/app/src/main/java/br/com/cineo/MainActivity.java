@@ -40,7 +40,7 @@ public class MainActivity extends Activity {
  void gap(LinearLayout p,int n){View v=new View(this);p.addView(v,new LinearLayout.LayoutParams(1,dp(n)));}
  void page(String name,String title,String subtitle,int tab,Runnable up){
   stopVideo();screen=name;generation++;busy=false;back=up;
-  root=col();root.setBackgroundColor(BG);setContentView(root);
+  if(root==null){root=col();root.setBackgroundColor(BG);setContentView(root);}else root.removeAllViews();
   root.setOnApplyWindowInsetsListener((v,i)->{if(Build.VERSION.SDK_INT>=30){android.graphics.Insets bars=i.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());int keyboard=i.getInsets(WindowInsets.Type.ime()).bottom;v.setPadding(bars.left,bars.top,bars.right,Math.max(bars.bottom,keyboard));return WindowInsets.CONSUMED;}v.setPadding(i.getSystemWindowInsetLeft(),i.getSystemWindowInsetTop(),i.getSystemWindowInsetRight(),i.getSystemWindowInsetBottom());return i.consumeSystemWindowInsets();});root.post(()->root.requestApplyInsets());
   LinearLayout header=row();header.setPadding(dp(20),dp(12),dp(20),dp(12));
   if(up!=null){Icon icon=new Icon("back",WHITE);header.addView(icon,new LinearLayout.LayoutParams(dp(36),dp(32)));icon.setContentDescription("Voltar");icon.setOnClickListener(v->{if(!busy)up.run();});}

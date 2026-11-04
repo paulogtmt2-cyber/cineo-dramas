@@ -1,4 +1,4 @@
-# Cineo / Dramas — Android 0.5
+# Cineo / Dramas — Android 0.6
 
 Aplicativo Android nativo em português para assistir e publicar séries, novelas e mini dramas independentes. O catálogo mostra apenas produções aprovadas. O backend ativo é a Edge Function `cineo` do Supabase; o servidor Python na pasta `backend` é um protótipo anterior e não é necessário para este APK.
 
@@ -63,3 +63,30 @@ A tela de assistir agora é um player de dramas vertical: vídeo com ajuste de p
 Deslizar para cima avança um capítulo e para baixo retorna. Um gesto muda apenas um capítulo, preserva o progresso do anterior e respeita primeiro/último capítulo. A área da barra de busca fica fora do reconhecimento de troca vertical. Toque pausa/retoma, dois toques buscam 10 segundos. O volume está em Mais e nos botões do aparelho. A trava de toques bloqueia troca de capítulo, botões e busca, com uma ação visível de desbloqueio.
 
 O menu Mais reúne velocidade, qualidade, legendas, volume, trava, barras do sistema, compartilhar e denunciar. Apenas episódios fornecidos pela API para o usuário atual entram na sequência. Prévia privada não recebe interações públicas.
+
+## Experiência completa 0.6
+
+1. Capas por rota autenticada com cache local, mensagem de erro e nova tentativa. A imagem original existente foi conferida: JPEG 836×470, HTTP 200.
+2. Editor de enquadramento com arraste, zoom e prévia. Cartaz 2:3 e banner 16:9 têm arquivos separados.
+3. Categorias criadas, ordenadas, ativadas ou ocultadas pelo ADM; vinculação por produção.
+4. Busca por texto/criador, gênero, classificação, categoria, duração total conhecida e série concluída.
+5. Histórico paginado por conta, retomada e remoção individual do progresso.
+6. Marcação manual de assistido ou não assistido pelo histórico e pelas opções do episódio.
+7. Reprodução automática configurável, contagem regressiva de 5 segundos e cancelamento.
+8. Temporizador de 15/30/60 minutos ou fim do episódio.
+9. Modo de foco oculta sinopse e ações, com botão para restaurá-las.
+10. Preferências de gêneros na primeira entrada e edição posterior.
+11. Recomendações pelos gêneros escolhidos e produções semelhantes ao gênero da série.
+12. Nota de 1 a 5 por usuário/produção, média e quantidade reais calculadas no banco.
+13. Coleções pessoais com nome, renomeação, inclusão e retirada de séries.
+14. Até três comentários fixados por criador; primeira página os apresenta antes dos demais.
+15. Bloqueio/desbloqueio de contas; comentários bloqueados são filtrados pelo servidor.
+16. Suporte: WhatsApp +55 21 96691-3668 e protocolos persistentes com respostas do ADM no app. O WhatsApp abre um rascunho; o usuário confirma o envio.
+17. Histórico de mudanças de situação de produções/capítulos com data e motivo. Registros novos são gerados no banco; produções antigas têm um registro da situação anterior à atualização.
+18. Fila de múltiplos MP4 com título/numeração editáveis, situação por arquivo e nova tentativa. IDs estáveis evitam duplicação se a resposta de um envio se perder.
+19. Diagnóstico do player distingue falha de conexão, arquivo inválido e formato incompatível.
+20. Página de versões e novidades, com link de download quando existe uma versão superior.
+
+Limites: uploads e fila funcionam em primeiro plano; manter o app aberto. Após interrupção, a nova tentativa reenvia o arquivo inteiro, não continua do byte anterior. A fila e preferências do player são locais e separadas por conta; listas, avaliações, bloqueios, histórico, interesses e protocolos ficam na conta. Não há conversão automática de qualidade ou de legendas. Duração desconhecida não entra no filtro por tempo. Os arquivos continuam limitados a MP4 25 MB, imagens JPEG 2 MB e legendas WebVTT 200 KB.
+
+As novas tabelas têm RLS e acesso direto negado aos clientes; a Edge Function valida o usuário e a propriedade/administrador. O APK de teste publicado fica em um bucket público dedicado, sem incluir credenciais ou mídias privadas. A publicação de uma atualização é restrita ao ADM.

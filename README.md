@@ -1,4 +1,4 @@
-# Cineo / Dramas — Android 0.4
+# Cineo / Dramas — Android 0.5
 
 Aplicativo Android nativo em português para assistir e publicar séries, novelas e mini dramas independentes. O catálogo mostra apenas produções aprovadas. O backend ativo é a Edge Function `cineo` do Supabase; o servidor Python na pasta `backend` é um protótipo anterior e não é necessário para este APK.
 
@@ -55,3 +55,11 @@ O artefato `Cineo-Dramas-APK` contém um APK de teste. A chave de debug passa a 
 O destaque utiliza somente produções aprovadas e liberadas. Estreias aprovadas aparecem no calendário; vídeos só são liberados na data. As tabelas novas têm RLS e acesso direto negado a anon/authenticated. A API valida o usuário e a autorização em cada rota. Funções de revisão, agregação e notificações são SECURITY INVOKER e somente service_role pode executá-las.
 
 Verificação 0.4: teste Android com 36 capturas, decodificação H.264, busca no vídeo, tela cheia preservando posição, velocidade, comentário, legendas, trava, importação do progresso e link de série. A API real foi verificada em 14 leituras autenticadas, bloqueio anônimo e entradas inválidas. Revisão de capítulo, notificação e estatísticas foram testadas em transação revertida, sem publicar conteúdo fictício.
+
+## Player vertical 0.5
+
+A tela de assistir agora é um player de dramas vertical: vídeo com ajuste de proporção, ações na lateral, título/sinopse sobrepostos, barra de busca discreta e seletor de episódios em painel inferior. Não há cartões ou botões grandes abaixo do vídeo. Contagens vêm da API; nenhuma audiência é simulada no APK.
+
+Deslizar para cima avança um capítulo e para baixo retorna. Um gesto muda apenas um capítulo, preserva o progresso do anterior e respeita primeiro/último capítulo. A área da barra de busca fica fora do reconhecimento de troca vertical. Toque pausa/retoma, dois toques buscam 10 segundos. O volume está em Mais e nos botões do aparelho. A trava de toques bloqueia troca de capítulo, botões e busca, com uma ação visível de desbloqueio.
+
+O menu Mais reúne velocidade, qualidade, legendas, volume, trava, barras do sistema, compartilhar e denunciar. Apenas episódios fornecidos pela API para o usuário atual entram na sequência. Prévia privada não recebe interações públicas.

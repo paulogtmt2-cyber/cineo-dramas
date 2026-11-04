@@ -140,7 +140,7 @@ public class ScreenTest {
   ui(()->a.uploads.form(show));capture("51-batch-upload-form");
   ui(()->a.uploads.screen());capture("52-upload-queue");
   final android.widget.FrameLayout[] imageFrame={null};ui(()->{try{a.page("art-test","Capas recuperadas","",0,null);JSONObject network=new JSONObject(show.toString()).put("cover_url","").put("cover_path","fixture-test-v6");imageFrame[0]=a.art.poster(network,320,false);a.body.addView(imageFrame[0],new LinearLayout.LayoutParams(-1,a.dp(320)));}catch(Exception ex){throw new RuntimeException(ex);}});
-  final boolean[] loaded={false};for(int i=0;i<100&&!loaded[0];i++){ui(()->loaded[0]=((ImageView)imageFrame[0].getChildAt(0)).getDrawable()!=null);Thread.sleep(100);}assertTrue("Authenticated artwork must decode",loaded[0]);capture("53-authenticated-artwork");
+  final boolean[] loaded={false};for(int i=0;i<100&&!loaded[0];i++){ui(()->loaded[0]=((ImageView)imageFrame[0].getChildAt(0)).getDrawable()!=null);Thread.sleep(100);}assertTrue("Authenticated artwork must decode",loaded[0]);ui(()->assertEquals(1f,imageFrame[0].getChildAt(0).getAlpha(),.001f));capture("53-authenticated-artwork");
   ui(()->{android.graphics.Bitmap source=android.graphics.BitmapFactory.decodeResource(a.getResources(),R.drawable.cinema_login);a.complete.editor.banner=false;CoverEditor.CropView crop=a.complete.editor.new CropView(source,2f/3);crop.layout(0,0,360,480);android.graphics.Bitmap result=crop.export();assertEquals(720,result.getWidth());assertEquals(1080,result.getHeight());assertTrue("Crop has image pixels",result.getPixel(360,540)!=0);});
   ui(()->{a.clearSession();a.login(false);});
  }

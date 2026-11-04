@@ -71,6 +71,8 @@ public class ScreenTest {
   JSONArray playable=new JSONArray().put(new JSONObject().put("id",99).put("title","Teste do player").put("subtitles","WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nLegenda do Cineo\n").put("url",sample.toURI().toString()));
   ui(()->a.play(show,playable,0,"catalog"));
   final boolean[] prepared={false};for(int i=0;i<100&&!prepared[0];i++){ui(()->prepared[0]=a.video!=null&&a.video.getDuration()>0);Thread.sleep(100);}assertTrue("Player must decode H264 MP4",prepared[0]);capture("18-player");ui(()->{assertEquals(1,a.pro.cues.size());assertEquals(5000,a.pro.cues.get(0).end);a.pro.locked=true;a.controlsVisible(false);a.controlsVisible(true);assertEquals(android.view.View.GONE,a.playerControls.getVisibility());a.pro.locked=false;});
+  ui(()->{long base=android.os.SystemClock.uptimeMillis();float x=a.playerFrame.getWidth()*.85f,y=a.playerFrame.getHeight()*.32f;for(int k=0;k<4;k++){android.view.MotionEvent event=android.view.MotionEvent.obtain(base,base+k*45,k%2==0?android.view.MotionEvent.ACTION_DOWN:android.view.MotionEvent.ACTION_UP,x,y,0);a.playerFrame.dispatchTouchEvent(event);event.recycle();}});Thread.sleep(600);
+  ui(()->{assertTrue("Double tap gesture seeks forward",a.video.getCurrentPosition()>5000);a.video.seekTo(0);});Thread.sleep(500);
   ui(()->{assertNotNull(a.media);a.togglePlayback();assertFalse(a.video.isPlaying());a.seekBy(10000);});Thread.sleep(500);
   ui(()->{assertTrue("Seek must advance playback",a.video.getCurrentPosition()>5000);a.togglePlayback();a.fullscreenPlayer();});capture("19-fullscreen");
   ui(()->{assertTrue(a.playerFullscreen);a.fullscreenPlayer();});Thread.sleep(700);

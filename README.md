@@ -1,4 +1,4 @@
-# Cineo / Dramas — Android 0.6
+# Cineo / Dramas — Android 0.7
 
 Aplicativo Android nativo em português para assistir e publicar séries, novelas e mini dramas independentes. O catálogo mostra apenas produções aprovadas. O backend ativo é a Edge Function `cineo` do Supabase; o servidor Python na pasta `backend` é um protótipo anterior e não é necessário para este APK.
 
@@ -90,3 +90,14 @@ O menu Mais reúne velocidade, qualidade, legendas, volume, trava, barras do sis
 Limites: uploads e fila funcionam em primeiro plano; manter o app aberto. Após interrupção, a nova tentativa reenvia o arquivo inteiro, não continua do byte anterior. A fila e preferências do player são locais e separadas por conta; listas, avaliações, bloqueios, histórico, interesses e protocolos ficam na conta. Não há conversão automática de qualidade ou de legendas. Duração desconhecida não entra no filtro por tempo. Os arquivos continuam limitados a MP4 25 MB, imagens JPEG 2 MB e legendas WebVTT 200 KB.
 
 As novas tabelas têm RLS e acesso direto negado aos clientes; a Edge Function valida o usuário e a propriedade/administrador. O APK de teste verificado fica na pasta releases do repositório público, sem incluir credenciais ou mídias privadas. A página de versões usa o link persistido no servidor. A rota de publicação de atualizações no armazenamento é restrita ao ADM.
+
+
+## Plataforma 0.7
+
+A atualização acrescenta descoberta pública, carrossel editorial, trailers silenciosos no Wi-Fi, rankings reais, séries completas, contagem de estreias e links HTTPS que abrem a série/episódio. Perfis de espectadores separam progresso, salvos e interesses; o modo infantil é validado pelo servidor e a troca para adulto usa PIN com limite de tentativas. Há sessões revogáveis, exportação de dados e exclusão solicitada com senha e prazo de sete dias.
+
+O player tem pré-carga do próximo arquivo no Wi-Fi, seleção automática de versões MP4, economia de dados, miniaturas na busca, abertura/créditos, PiP, Google Cast, downloads autorizados, escolha de faixas fornecidas pelo criador e estilos de legenda. Downloads não usam DRM e não podem ser recolhidos retroativamente; perfis separados os acessam por sua própria lista. Cast exige equipamento compatível e Google Play Services.
+
+O estúdio inclui prévia, checklist, equipe com leitura/edição, agendamento de capítulos, créditos, intervalos de abertura, faixas de dublagem/audiodescrição, avisos de correção e recursos de análise. O painel acompanha retenção agregada, priorização, verificações e armazenamento. Avisos no Android usam consultas periódicas do JobScheduler, sujeitas a rede e bateria, e não prometem entrega instantânea.
+
+Uploads em partes de 2 MB usam IDs estáveis e SHA-256 para retomar sem misturar arquivos. Os limites de 25 MB por vídeo permanecem. O worker FFmpeg no GitHub Actions usa OIDC de curta duração com repositório, audiência, branch e workflow verificados; nenhuma chave de serviço é fornecida ao runner. Ele valida o arquivo inteiro, informa ausência de áudio, prepara versões menores e uma faixa de miniaturas. A agenda executa aproximadamente a cada 30 minutos, sujeita à disponibilidade do GitHub. Novos vídeos precisam concluir a validação antes de serem enviados/aprovados. Não há promessa de capacidade ilimitada no plano gratuito.

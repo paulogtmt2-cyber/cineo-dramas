@@ -1,0 +1,7 @@
+package br.com.cineo;
+import android.content.*;import android.security.keystore.*;import java.security.*;import javax.crypto.*;import javax.crypto.spec.*;import org.json.*;
+/** The activity and scheduled notice job share the same Android Keystore record. */
+class SessionStore {
+ static JSONObject read(Context context)throws Exception{SharedPreferences p=context.getSharedPreferences("cineo_v2",0);String value=p.getString("session","");if(value.isEmpty())return new JSONObject();KeyStore ks=KeyStore.getInstance("AndroidKeyStore");ks.load(null);Cipher c=Cipher.getInstance("AES/GCM/NoPadding");c.init(Cipher.DECRYPT_MODE,ks.getKey("cineo_session",null),new GCMParameterSpec(128,android.util.Base64.decode(p.getString("iv",""),2)));return new JSONObject(new String(c.doFinal(android.util.Base64.decode(value,2)),"UTF-8"));}
+ static void write(Context context,JSONObject data)throws Exception{KeyStore ks=KeyStore.getInstance("AndroidKeyStore");ks.load(null);if(!ks.containsAlias("cineo_session")){KeyGenerator g=KeyGenerator.getInstance("AES","AndroidKeyStore");g.init(new KeyGenParameterSpec.Builder("cineo_session",3).setBlockModes("GCM").setEncryptionPaddings("NoPadding").build());g.generateKey();}Cipher c=Cipher.getInstance("AES/GCM/NoPadding");c.init(Cipher.ENCRYPT_MODE,ks.getKey("cineo_session",null));context.getSharedPreferences("cineo_v2",0).edit().putString("iv",android.util.Base64.encodeToString(c.getIV(),2)).putString("session",android.util.Base64.encodeToString(c.doFinal(data.toString().getBytes("UTF-8")),2)).apply();}
+}

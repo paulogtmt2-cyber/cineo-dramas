@@ -31,6 +31,23 @@ public class ScreenTest {
   ByteArrayOutputStream artBytes=new ByteArrayOutputStream();try(InputStream in=a.getResources().openRawResource(R.drawable.cinema_login)){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)artBytes.write(b,0,n);}final String artwork=android.util.Base64.encodeToString(artBytes.toByteArray(),2);
   java.util.concurrent.atomic.AtomicInteger posted=new java.util.concurrent.atomic.AtomicInteger();
   ui(()->{a.token="test-ui-only";a.uid="ui-fixture";a.email="criador@example.test";a.role="admin";a.expires=Long.MAX_VALUE;a.transport=(method,path,payload,bearer)->{
+   if(path.equals("/v7/home"))return a.obj("featured",new JSONArray().put(show),"latest",new JSONArray().put(show),"marathon",new JSONArray().put(show),"top",new JSONArray().put(show),"upcoming",new JSONArray());
+   if(path.equals("/guest"))return a.obj("items",new JSONArray().put(show));
+   if(path.equals("/v7/viewers"))return a.obj("items",new JSONArray().put(a.obj("id","viewer-fixture","name","Paulo","kids",false,"max_rating",18)),"pin_set",false);
+   if(path.equals("/v7/devices"))return a.obj("current","session-fixture","items",new JSONArray().put(a.obj("session_id","session-fixture","name","Android de teste","last_seen","2026-11-04T12:00:00Z","revoked",false)));
+   if(path.equals("/v7/notification-prefs"))return a.obj("episodes",true,"corrections",true,"start_hour",8,"end_hour",22);
+   if(path.equals("/v7/appeals"))return a.obj("items",new JSONArray());
+   if(path.equals("/v7/shared"))return a.obj("items",new JSONArray());
+   if(path.startsWith("/v7/queue"))return a.obj("items",new JSONArray().put(pending));
+   if(path.equals("/v7/health"))return a.obj("storage",new JSONArray().put(a.obj("bucket_id","cineo-videos","files",1,"bytes",102400)),"faults",new JSONArray(),"jobs",new JSONArray());
+   if(path.endsWith("/checklist"))return a.obj("checks",new JSONArray().put(a.obj("label","Título preenchido","ok",true)),"ready",true);
+   if(path.endsWith("/preview"))return show;
+   if(path.endsWith("/options"))return a.obj("credits",new JSONArray().put(a.obj("name","Ana Silva","role","Direção")),"allow_download",true,"featured_order",0);
+   if(path.endsWith("/team"))return a.obj("items",new JSONArray());
+   if(path.endsWith("/insights"))return a.obj("buckets",new JSONArray().put(a.obj("bucket",0,"viewers",2)).put(a.obj("bucket",1,"viewers",1)),"episodes",new JSONArray());
+   if(path.startsWith("/v7/episode/")&&path.endsWith("/settings"))return a.obj("episode",episodes.getJSONObject(0),"job",a.obj("status","ready","message",""));
+   if(path.equals("/v7/uploads/start"))return a.obj("parts",new JSONArray());
+   if(path.startsWith("/v7/uploads/")||path.equals("/v7/retention")||path.equals("/v7/fault"))return a.obj("ok",true);
    if(path.startsWith("/v6/art/"))return a.obj("image",artwork);
    if(path.equals("/v6/preferences"))return a.obj("genres",new JSONArray().put("Drama"),"onboarded",true);
    if(path.equals("/v6/categories"))return a.obj("items",new JSONArray().put(a.obj("id",1,"name","Maratonas","position",0,"active",true)));
@@ -142,6 +159,25 @@ public class ScreenTest {
   final android.widget.FrameLayout[] imageFrame={null};ui(()->{try{a.page("art-test","Capas recuperadas","",0,null);JSONObject network=new JSONObject(show.toString()).put("cover_url","").put("cover_path","fixture-test-v6");imageFrame[0]=a.art.poster(network,320,false);a.body.addView(imageFrame[0],new LinearLayout.LayoutParams(-1,a.dp(320)));}catch(Exception ex){throw new RuntimeException(ex);}});
   final boolean[] loaded={false};for(int i=0;i<100&&!loaded[0];i++){ui(()->loaded[0]=((ImageView)imageFrame[0].getChildAt(0)).getDrawable()!=null);Thread.sleep(100);}assertTrue("Authenticated artwork must decode",loaded[0]);ui(()->assertEquals(1f,imageFrame[0].getChildAt(0).getAlpha(),.001f));capture("53-authenticated-artwork");
   ui(()->{android.graphics.Bitmap source=android.graphics.BitmapFactory.decodeResource(a.getResources(),R.drawable.cinema_login);a.complete.editor.banner=false;CoverEditor.CropView crop=a.complete.editor.new CropView(source,2f/3);crop.layout(0,0,360,480);android.graphics.Bitmap result=crop.export();assertEquals(720,result.getWidth());assertEquals(1080,result.getHeight());assertTrue("Crop has image pixels",result.getPixel(360,540)!=0);});
+  ui(()->a.accounts.profiles());capture("54-viewer-profiles");
+  ui(()->a.accounts.newViewer(true));capture("55-create-viewer");
+  ui(()->a.accounts.pin(false));capture("56-parental-pin");
+  ui(()->a.accounts.devices());capture("57-devices");
+  ui(()->a.accounts.notifications());capture("58-phone-notices");
+  ui(()->a.accounts.privacy());capture("59-privacy-center");
+  ui(()->a.playerExtras.settings());capture("60-accessible-player");
+  ui(()->a.playerExtras.downloads());capture("61-downloads");
+  ui(()->a.studioTools.checklist(show));capture("62-publication-checklist");
+  ui(()->a.studioTools.preview(show));capture("63-publication-preview");
+  ui(()->a.studioTools.options(show));capture("64-cast-and-permissions");
+  ui(()->a.studioTools.team(show));capture("65-collaborators");
+  ui(()->a.studioTools.insights(show));capture("66-retention");
+  ui(()->a.studioTools.episode(show,episodes.optJSONObject(0)));capture("67-episode-schedule");
+  ui(()->a.studioTools.trackForm(show,episodes.optJSONObject(0)));capture("68-audio-tracks");
+  ui(()->a.studioTools.appeals());capture("69-appeals");
+  ui(()->a.studioTools.queue(true));capture("70-priority-review");
+  ui(()->a.studioTools.health());capture("71-platform-health");
+  ui(()->{String before=a.local("episode_99");a.viewerId="viewer-fixture";assertFalse("Viewer cache must be isolated",before.equals(a.local("episode_99")));a.viewerId="";a.prefs.edit().putBoolean(a.local("high_contrast"),true).apply();assertEquals("Contrast preference changes muted text",0xffdfe7f1,a.label("Teste",14,MainActivity.MUTED).getCurrentTextColor());a.prefs.edit().putBoolean(a.local("high_contrast"),false).apply();});
   ui(()->{a.clearSession();a.login(false);});
  }
 }

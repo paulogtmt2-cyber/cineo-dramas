@@ -1,0 +1,25 @@
+name: Preparar vídeos Cineo
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/30 * * * *'
+  push:
+    paths: ['ci/media-worker.py', '.github/workflows/media.yml']
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: cineo-media
+  cancel-in-progress: false
+jobs:
+  media:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare FFmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Validate and prepare queued videos
+        run: python3 ci/media-worker.py

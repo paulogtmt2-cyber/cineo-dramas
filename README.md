@@ -104,3 +104,13 @@ Uploads em partes de 2 MB usam IDs estáveis e SHA-256 para retomar sem misturar
 
 
 A exportação JSON informa o limite de 10.000 registros por tabela e não inclui os binários das mídias. Os dados do PIN, tokens de perfis e chaves de sessão não entram na exportação. O PIN usa PBKDF2 e as tentativas são contadas de forma atômica no banco. Métricas de tráfego da API guardam somente contagens e tamanhos; o tráfego direto de vídeos é consultado no painel do provedor. As conversas dos comentários têm uma folha própria de respostas e paginação. O progresso visto offline é enviado ao voltar a conectar, mantendo o perfil de origem.
+
+
+### Validação da versão entregue 0.7
+
+- APK: 5.786.813 bytes; SHA-256 `c6199cf607bd458bdb9daf52114a299244c7f9759c6a5b3ba6936fdc25cd9323`. Mesma assinatura da versão 0.6, permitindo atualização sem desinstalar.
+- Compilação e instrumentação Android: 72 capturas de telas/fluxos, teste aprovado no emulador API 35.
+- Backend: módulos verificados por sintaxe, exportações e hashes; 6 testes de limites de acesso e assinatura; 28 verificações autenticadas de leitura no endereço de teste, com sessão encerrada ao final.
+- FFmpeg: vídeo válido processado e arquivo corrompido rejeitado. O workflow validou sua identidade OIDC contra o servidor. Nesta rodada não havia vídeos reais pendentes na fila.
+- O mesmo pacote validado foi promovido ao servidor principal, e os endpoints públicos e o bloqueio de acesso anônimo foram conferidos novamente. O APK foi publicado pelo endpoint administrativo em armazenamento público, com metadados da versão atualizados.
+- Google Cast, notificações em segundo plano e downloads em redes reais ainda dependem de validação em aparelhos físicos. Não há alegação de teste completo dessas integrações no emulador.

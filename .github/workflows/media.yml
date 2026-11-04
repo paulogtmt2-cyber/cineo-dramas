@@ -27,5 +27,5 @@ jobs:
         run: python3 ci/test_media.py
       - name: Validate and prepare queued videos
         env:
-          CINEO_API_BASE: https://njyjwcjrirqmbvsizqar.supabase.co/functions/v1/cineo-preview
+          CINEO_API_BASE: https://njyjwcjrirqmbvsizqar.supabase.co/functions/v1/cineo
         run: python3 ci/media-worker.py

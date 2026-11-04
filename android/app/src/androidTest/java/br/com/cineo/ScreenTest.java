@@ -21,12 +21,26 @@ public class ScreenTest {
   Thread.sleep(2000);capture("01-login");assertEquals("login",current().screen);
   ui(()->current().login(true));capture("02-register");
   final MainActivity a=current();
-  JSONObject show=new JSONObject().put("id",1).put("title","Asfalto e Segredos").put("synopsis","Uma história de escolhas, encontros e novos caminhos.").put("genre","Drama").put("rating","14").put("status","approved").put("cover_url","android.resource://br.com.cineo/"+R.drawable.cinema_login);
+  JSONObject show=new JSONObject().put("id",1).put("title","Asfalto e Segredos").put("synopsis","Uma história de escolhas, encontros e novos caminhos.").put("genre","Drama").put("rating","14").put("status","approved").put("owner_id","ui-fixture").put("cover_url","android.resource://br.com.cineo/"+R.drawable.cinema_login);
   JSONObject draft=new JSONObject(show.toString()).put("id",2).put("title","Entre dois mundos").put("status","draft");
   JSONObject pending=new JSONObject(show.toString()).put("id",3).put("title","Céu de Agosto").put("status","pending");
-  JSONArray episodes=new JSONArray().put(new JSONObject().put("id",11).put("title","O primeiro encontro").put("url","https://example.test/video.mp4"));
+  JSONArray episodes=new JSONArray().put(new JSONObject().put("id",11).put("title","O primeiro encontro").put("season",1).put("episode_number",1).put("review_status","draft").put("duration_seconds",20).put("url","https://example.test/video.mp4"));
   java.util.concurrent.atomic.AtomicInteger posted=new java.util.concurrent.atomic.AtomicInteger();
   ui(()->{a.token="test-ui-only";a.uid="ui-fixture";a.email="criador@example.test";a.role="admin";a.expires=Long.MAX_VALUE;a.transport=(method,path,payload,bearer)->{
+   if(path.equals("/v4/progress"))return method.equals("POST")?a.obj("ok",true):a.obj("items",new JSONArray().put(a.obj("episode_id",11,"position_ms",7000,"duration_ms",20000,"completed",false,"episode",a.obj("show_id",1))));
+   if(path.equals("/v4/home"))return a.obj("featured_id",1,"collections",new JSONArray().put(a.obj("title","Escolhas do Cineo","items",new JSONArray().put(show))),"upcoming",new JSONArray().put(new JSONObject(show.toString()).put("premiere_at","2026-12-01T22:00:00Z")));
+   if(path.startsWith("/v4/show/")&&path.endsWith("/extras"))return a.obj("premiere_at",JSONObject.NULL,"trailer_url","","owner_id","ui-fixture");
+   if(path.equals("/v4/profile"))return method.equals("POST")?payload:a.obj("name","Criador de histórias","bio","Histórias independentes.","avatar","");
+   if(path.startsWith("/v4/creator/"))return a.obj("name","Criador de histórias","bio","Histórias independentes.","avatar","","followers",8,"items",new JSONArray().put(show));
+   if(path.startsWith("/v4/follow?"))return a.obj("following",false);
+   if(path.equals("/v4/follow"))return a.obj("following",payload.optBoolean("following"));
+   if(path.equals("/v4/following"))return a.obj("items",new JSONArray().put(show));
+   if(path.equals("/v4/notifications"))return a.obj("items",new JSONArray().put(a.obj("title","Novo episódio","show",show,"created_at","2026-11-04T12:00:00Z","read",false)));
+   if(path.equals("/v4/analytics"))return a.obj("followers",8,"items",new JSONArray().put(a.obj("title","Asfalto e Segredos","viewers",12,"completed",9,"likes",6)));
+   if(path.equals("/v4/editorial"))return a.obj("config",a.obj("featured_id",1),"items",new JSONArray().put(a.obj("id",1,"title","Histórias para maratonar","show_ids",new JSONArray().put(1),"position",1,"active",true)));
+   if(path.equals("/v4/episode-queue"))return a.obj("items",new JSONArray().put(new JSONObject(episodes.getJSONObject(0).toString()).put("show_id",1).put("show",show).put("review_status","pending")));
+   if(path.equals("/v4/reports"))return a.obj("items",new JSONArray().put(a.obj("id",1,"kind","comment","target_id",1,"reason","Comentário a revisar","status","open")));
+   if(path.equals("/shows/1"))return show;
    if(path.equals("/stats"))return a.obj("pending",1,"approved",1,"rejected",0,"draft",1);
    if(path.endsWith("/episodes"))return a.obj("items",episodes);
    if(path.startsWith("/admin"))return a.obj("items",new JSONArray().put(pending),"next",JSONObject.NULL);
@@ -38,7 +52,7 @@ public class ScreenTest {
    if(path.equals("/saved"))return a.obj("items",new JSONArray().put(show),"next",JSONObject.NULL);
    if(path.equals("/catalog"))return a.obj("items",new JSONArray().put(show),"next",JSONObject.NULL);
    throw new IOException("Unexpected test request: "+path);
-  };a.catalog(false);});capture("03-home");assertEquals("home",a.screen);
+  };a.catalog(false);});capture("03-home");assertEquals("home",a.screen);assertEquals("Cloud resume imported",7000,a.prefs.getInt(a.local("episode_11"),0));
   ui(()->a.catalog(true));capture("04-search");
   ui(()->a.details(show,"catalog"));capture("05-details");
   ui(()->{a.prefs.edit().putBoolean(a.local("saved_1"),true).apply();a.saved();});capture("06-favorites");
@@ -54,9 +68,9 @@ public class ScreenTest {
   ui(()->a.password());capture("16-password");
   ui(()->{a.page("home","Explore o Cineo","",0,null);a.renderCatalog(a.body,new JSONArray(),"","Todos",false);});capture("17-empty-state");
   File sample=new File(a.getCacheDir(),"sample.mp4");try(InputStream in=InstrumentationRegistry.getInstrumentation().getContext().getAssets().open("sample.mp4");FileOutputStream out=new FileOutputStream(sample)){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);}
-  JSONArray playable=new JSONArray().put(new JSONObject().put("id",99).put("title","Teste do player").put("url",sample.toURI().toString()));
+  JSONArray playable=new JSONArray().put(new JSONObject().put("id",99).put("title","Teste do player").put("subtitles","WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nLegenda do Cineo\n").put("url",sample.toURI().toString()));
   ui(()->a.play(show,playable,0,"catalog"));
-  final boolean[] prepared={false};for(int i=0;i<100&&!prepared[0];i++){ui(()->prepared[0]=a.video!=null&&a.video.getDuration()>0);Thread.sleep(100);}assertTrue("Player must decode H264 MP4",prepared[0]);capture("18-player");
+  final boolean[] prepared={false};for(int i=0;i<100&&!prepared[0];i++){ui(()->prepared[0]=a.video!=null&&a.video.getDuration()>0);Thread.sleep(100);}assertTrue("Player must decode H264 MP4",prepared[0]);capture("18-player");ui(()->{assertEquals(1,a.pro.cues.size());assertEquals(5000,a.pro.cues.get(0).end);a.pro.locked=true;a.controlsVisible(false);a.controlsVisible(true);assertEquals(android.view.View.GONE,a.playerControls.getVisibility());a.pro.locked=false;});
   ui(()->{assertNotNull(a.media);a.togglePlayback();assertFalse(a.video.isPlaying());a.seekBy(10000);});Thread.sleep(500);
   ui(()->{assertTrue("Seek must advance playback",a.video.getCurrentPosition()>5000);a.togglePlayback();a.fullscreenPlayer();});capture("19-fullscreen");
   ui(()->{assertTrue(a.playerFullscreen);a.fullscreenPlayer();});Thread.sleep(700);
@@ -66,6 +80,21 @@ public class ScreenTest {
   ui(()->{android.view.View content=a.commentsDialog.getWindow().getDecorView();((EditText)find(content,"Escreva um comentário…")).setText("Comentário de teste");find(content,"Publicar comentário").performClick();});Thread.sleep(700);assertEquals("Comment sent once to the current episode",1,posted.get());capture("22-comment-published");ui(()->a.commentsDialog.dismiss());
   ui(()->a.episodeMenu());capture("21-episodes");InstrumentationRegistry.getInstrumentation().getUiAutomation().performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK);
 
+  ui(()->a.pro.profileEditor());capture("23-public-profile-edit");
+  ui(()->a.pro.creator("ui-fixture"));capture("24-creator");
+  ui(()->a.pro.calendar());capture("25-premieres");
+  ui(()->a.pro.following());capture("26-following");
+  ui(()->a.pro.notifications());capture("27-notifications");
+  ui(()->a.pro.studio(show));capture("28-studio");
+  ui(()->a.pro.newEpisode(show));capture("29-new-episode");
+  ui(()->a.pro.episodeAssets(show,episodes.optJSONObject(0)));capture("30-episode-assets");
+  ui(()->a.pro.analytics());capture("31-analytics");
+  ui(()->a.pro.editorial());capture("32-editorial");
+  ui(()->a.pro.collection(null));capture("33-collection");
+  ui(()->a.pro.episodeQueue());capture("34-episode-queue");
+  ui(()->a.pro.reports());capture("35-reports");
+  ui(()->a.pro.dataSettings());capture("36-data-settings");
+  ui(()->{a.pro.captureLink(new android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse("cineo://show/1")));assertTrue(a.pro.openLink());});settled();assertEquals("detail",a.screen);
   ui(()->{a.clearSession();a.login(false);});
  }
 }

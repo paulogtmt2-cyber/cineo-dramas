@@ -5,7 +5,7 @@ const opts={auth:{persistSession:false,autoRefreshToken:false}};
 const response=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 function check(ok:unknown,message:string){if(!ok)throw new Error(message)}
 function result(r:any){if(r.error)throw new Error(r.error.message);return r.data}
-function friendly(message:string){if(message.includes('Email not confirmed'))return 'Confirme seu email antes de entrar. Confira também a pasta de spam.';if(message.includes('Invalid login credentials'))return 'Email ou senha incorretos.';if(message.includes('rate limit'))return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';return message;}
+function friendly(message:string){if(message.includes('cineo_episode_chapter_idx'))return 'Este número de episódio já existe nesta temporada. Escolha outro.';if(message.includes('Email not confirmed'))return 'Confirme seu email antes de entrar. Confira também a pasta de spam.';if(message.includes('Invalid login credentials'))return 'Email ou senha incorretos.';if(message.includes('rate limit'))return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';return message;}
 Deno.serve(async req=>{
  try{
  const route=new URL(req.url), path=route.pathname.split('/cineo')[1]||'/';

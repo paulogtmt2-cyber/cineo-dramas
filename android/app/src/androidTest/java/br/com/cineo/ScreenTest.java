@@ -34,6 +34,7 @@ public class ScreenTest {
    if(path.equals("/v7/home"))return a.obj("featured",new JSONArray().put(show),"latest",new JSONArray().put(show),"marathon",new JSONArray().put(show),"top",new JSONArray().put(show),"upcoming",new JSONArray());
    if(path.equals("/guest"))return a.obj("items",new JSONArray().put(show));
    if(path.equals("/v7/viewers"))return a.obj("items",new JSONArray().put(a.obj("id","viewer-fixture","name","Paulo","kids",false,"max_rating",18)),"pin_set",false);
+   if(path.startsWith("/v7/thread/"))return a.obj("root",a.obj("id",1,"author_name","Espectador","body","Gostei desta história!"),"items",new JSONArray().put(a.obj("id",2,"author_name","Outro espectador","body","Também gostei.","parent_id",1)),"next",JSONObject.NULL);
    if(path.equals("/v7/devices"))return a.obj("current","session-fixture","items",new JSONArray().put(a.obj("session_id","session-fixture","name","Android de teste","last_seen","2026-11-04T12:00:00Z","revoked",false)));
    if(path.equals("/v7/notification-prefs"))return a.obj("episodes",true,"corrections",true,"start_hour",8,"end_hour",22);
    if(path.equals("/v7/appeals"))return a.obj("items",new JSONArray());
@@ -177,6 +178,7 @@ public class ScreenTest {
   ui(()->a.studioTools.appeals());capture("69-appeals");
   ui(()->a.studioTools.queue(true));capture("70-priority-review");
   ui(()->a.studioTools.health());capture("71-platform-health");
+  ui(()->{a.activeShow=show;a.playingEpisode=99;try{a.discussions.open(a.obj("id",1,"author_name","Espectador"));}catch(Exception ex){throw new RuntimeException(ex);}});capture("72-comment-conversation");ui(()->a.discussions.close());
   ui(()->{String before=a.local("episode_99");a.viewerId="viewer-fixture";assertFalse("Viewer cache must be isolated",before.equals(a.local("episode_99")));a.viewerId="";a.prefs.edit().putBoolean(a.local("high_contrast"),true).apply();assertEquals("Contrast preference changes muted text",0xffdfe7f1,a.label("Teste",14,MainActivity.MUTED).getCurrentTextColor());a.prefs.edit().putBoolean(a.local("high_contrast"),false).apply();});
   ui(()->{a.clearSession();a.login(false);});
  }

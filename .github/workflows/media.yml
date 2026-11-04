@@ -10,7 +10,7 @@ permissions:
   id-token: write
 concurrency:
   group: cineo-media
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   media:
     runs-on: ubuntu-latest
@@ -19,7 +19,13 @@ jobs:
       - uses: actions/checkout@v4
       - name: Prepare FFmpeg
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq ffmpeg
+          if ! command -v ffmpeg >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq ffmpeg
+          fi
+      - name: Test media pipeline
+        run: python3 ci/test_media.py
       - name: Validate and prepare queued videos
+        env:
+          CINEO_API_BASE: https://njyjwcjrirqmbvsizqar.supabase.co/functions/v1/cineo-preview
         run: python3 ci/media-worker.py

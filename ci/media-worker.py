@@ -1,6 +1,6 @@
 """Private media processing using short-lived GitHub identity; no Supabase secrets in CI."""
 import os,json,urllib.request,urllib.parse,tempfile,subprocess,base64,pathlib,time
-BASE='https://njyjwcjrirqmbvsizqar.supabase.co/functions/v1/cineo/v7/worker'
+BASE=os.environ.get('CINEO_API_BASE','https://njyjwcjrirqmbvsizqar.supabase.co/functions/v1/cineo')+'/v7/worker'
 def api(path,data):
     u=os.environ['ACTIONS_ID_TOKEN_REQUEST_URL']+'&audience=cineo-media'
     req=urllib.request.Request(u,headers={'Authorization':'Bearer '+os.environ['ACTIONS_ID_TOKEN_REQUEST_TOKEN']})
@@ -50,6 +50,17 @@ if __name__=='__main__':
         if not job:break
         try:result=process(job)
         except Exception as e:result={'ok':False,'message':str(e)[:200]}
-        result.update(id=job['id'],lease=job['lease']);api('/result',result)
+        result.update(id=job['id'],lease=job['lease'])
+        if result.get('ok'):
+            outputs={}
+            for kind in ['low','medium','thumb']:
+                if kind not in result:continue
+                signed=api('/upload',{'id':job['id'],'lease':job['lease'],'kind':kind})
+                binary=base64.b64decode(result.pop(kind))
+                request=urllib.request.Request(signed['url'],data=binary,headers={'Content-Type':'image/jpeg' if kind=='thumb' else 'video/mp4','x-upsert':'true'},method='PUT')
+                with urllib.request.urlopen(request,timeout=240) as response:assert response.status in (200,201)
+                outputs[kind]=signed['path']
+            result['outputs']=outputs
+        api('/result',result)
         completed+=1
     print('Vídeos processados:',completed)

@@ -4,15 +4,17 @@ import {completeApi} from './complete.ts';
 import {createClient} from 'npm:@supabase/supabase-js@2.57.4';
 const url=Deno.env.get('SUPABASE_URL')!;
 const opts={auth:{persistSession:false,autoRefreshToken:false}};
-const response=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
+const baseResponse=(data:unknown,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 function check(ok:unknown,message:string){if(!ok)throw new Error(message)}
 function result(r:any){if(r.error)throw new Error(r.error.message);return r.data}
 function friendly(message:string){if(message.includes('cineo_episode_chapter_idx'))return 'Este número de episódio já existe nesta temporada. Escolha outro.';if(message.includes('Email not confirmed'))return 'Confirme seu email antes de entrar. Confira também a pasta de spam.';if(message.includes('Invalid login credentials'))return 'Email ou senha incorretos.';if(message.includes('rate limit'))return 'Muitas tentativas. Aguarde alguns minutos e tente novamente.';return message;}
 Deno.serve(async req=>{
- try{
- const route=new URL(req.url), path=route.pathname.split('/cineo')[1]||'/';
- if(path==='/health')return response({ok:true,version:'0.7.0'});
  const db=createClient(url,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,opts);
+ const response=(data:unknown,status=200)=>{const task=db.rpc('cineo_count_traffic',{incoming:Math.min(36000000,Math.max(0,Number(req.headers.get('content-length'))||0)),outgoing:new TextEncoder().encode(JSON.stringify(data)).length}).then(()=>{},()=>{});const runtime=(globalThis as any).EdgeRuntime;if(runtime)runtime.waitUntil(task);return baseResponse(data,status);};
+ try{
+ const route=new URL(req.url), parts=route.pathname.split('/'), fn=parts.findIndex(s=>s==='cineo'||s==='cineo-preview'), path=fn>=0?('/'+parts.slice(fn+1).join('/')):'/';
+ if(path==='/health')return response({ok:true,version:'0.7.0'});
+
  if(path==='/version'&&req.method==='GET'){const r=await db.from('cineo_release').select('version_code,version_name,notes,download_url').eq('id',1).single();return response(result(r));}
  if(path.startsWith('/v7/worker/'))return await mediaWorker(req,db,path,response,result);
  if(path==='/guest'&&req.method==='GET'){const rows=result(await db.from('cineo_shows').select('id,title,synopsis,genre,rating,cover_path,banner_path,status,hidden,premiere_at,finished,created_at').eq('status','approved').eq('hidden',false).or('premiere_at.is.null,premiere_at.lte.'+new Date().toISOString()).order('id',{ascending:false}).limit(30));const items=await Promise.all(rows.map(async(s:any)=>({...s,cover_url:s.cover_path?(await db.storage.from('cineo-covers').createSignedUrl(s.cover_path,3600)).data?.signedUrl:''})));return response({items});}
@@ -38,11 +40,12 @@ Deno.serve(async req=>{
  const device=result(await db.from('cineo_devices').select('revoked,last_seen').eq('session_id',sessionId).eq('user_id',uid).maybeSingle());if(device?.revoked)return response({error:'Acesso encerrado neste aparelho.'},401);
  if(result(await db.from('cineo_erasure').select('user_id').eq('user_id',uid).maybeSingle()))return response({error:'Conta em processo de exclusão. Fale com o suporte se precisar de ajuda.'},401);
  if(!device||Date.parse(device.last_seen)<Date.now()-300000)result(await db.from('cineo_devices').upsert({session_id:sessionId,user_id:uid,name:String(req.headers.get('X-Cineo-Device')||'Android').slice(0,80),last_seen:new Date().toISOString()}));
- let viewer=null;try{viewer=await viewerContext(db,uid,req,sessionId);}catch(e){if(!((path==='/v7/viewers'&&req.method==='GET')||path==='/v7/viewer-switch'))return response({error:'Escolha um perfil para continuar.',viewer_required:true},423);}
+ let viewer=null;try{viewer=await viewerContext(db,uid,req,sessionId);}catch(e){if(!((path==='/v7/viewers'&&req.method==='GET')||path==='/v7/viewer-switch'||path==='/logout'))return response({error:'Escolha um perfil para continuar.',viewer_required:true},423);}
  if(viewer?.kids){const forbidden=['/mine','/admin','/queue','/stats','/shows','/password','/v4/analytics','/v4/editorial','/v4/reports','/v4/episode-queue','/v7/shared','/v7/health','/v7/queue','/v7/appeals'];if(forbidden.includes(path)||(req.method==='POST'&&!/^\/(v4\/(progress|follow)|v6\/(rating|preferences|watched|history|lists)|v7\/(progress|saved|retention|viewer-switch|fault)|logout|shows\/\d+\/save)$/.test(path)))return response({error:'Esta ação precisa do perfil do responsável.'},403);}
+ if(viewer?.kids&&req.method==='GET'&&!/^(\/catalog|\/saved|\/v4\/(profile|home|notifications|following|follow|creator\/[a-f0-9-]+|show\/\d+\/extras)|\/shows\/\d+(?:\/(episodes|social|save|comments))?|\/v6\/(preferences|categories|recommend|rating|history|lists|list\/\d+|art\/\d+|show\/\d+\/related)|\/v7\/(home|viewers|bulletins|thread\/\d+|episode\/\d+\/download))$/.test(path))return response({error:'Esta área precisa do perfil do responsável.'},403);
  const target=path.match(/^\/(?:shows|v4\/show|v6\/show|v7\/show|v6\/art)\/(\d+)/);if(viewer?.kids&&target){const s=result(await db.from('cineo_shows').select('*').eq('id',Number(target[1])).maybeSingle());if(!s||!allowed(s,viewer))return response({error:'Produção indisponível neste perfil.'},403);}
 
- const admin=!!result(await db.from('cineo_admins').select('user_id').eq('user_id',uid).maybeSingle());
+ const admin=!viewer?.kids&&!!result(await db.from('cineo_admins').select('user_id').eq('user_id',uid).maybeSingle());
  if(path==='/logout'&&req.method==='POST'){const r=await db.auth.admin.signOut(token,'local');if(r.error)throw r.error;return response({ok:true});}
  if(path==='/password'&&req.method==='POST'){
  check(String(data.password||'').length>=8,'Use pelo menos 8 caracteres.');
@@ -56,9 +59,10 @@ Deno.serve(async req=>{
  if(['/v4/episode-submit','/v4/episode-review'].includes(path)&&req.method==='POST'&&(path.endsWith('submit')||data.decision==='approved')){const job=result(await db.from('cineo_media_jobs').select('status').eq('episode_id',Number(data.id)).maybeSingle());check(!job||job.status==='ready','Aguarde a validação técnica do capítulo.');}
  if(viewer&&path==='/v4/progress'){const out=await platformApi({...ctx,path:'/v7/progress'});if(out)return out;}
  if(viewer&&path==='/saved'){const out=await platformApi({...ctx,path:'/v7/saved'});if(out)return out;}
+ if(path==='/v4/profile'&&req.method==='GET'){const p=result(await db.from('cineo_profiles').select('*').eq('user_id',uid).maybeSingle())||{name:'Criador',bio:'',avatar:''};return response({...p,viewer});}
  if(viewer&&path==='/v6/preferences'){if(req.method==='POST'){check(Array.isArray(data.genres)&&data.genres.length<=12&&data.genres.every((x:any)=>typeof x==='string'&&x.length<=40),'Gêneros inválidos.');result(await db.from('cineo_viewers').update({genres:data.genres}).eq('id',viewer.id));return response({genres:data.genres,onboarded:true});}return response({genres:viewer.genres,onboarded:true});}
- if(path.startsWith('/v6/'))return await completeApi({db,uid,admin,req,data,route,covers,check,result,response,path});
- if(path.startsWith('/v4/'))return await proApi({db,uid,admin,req,data,route,covers,check,result,response,path});
+ if(path.startsWith('/v6/'))return await completeApi({db,uid,admin,req,data,route,covers,check,result,response,path,viewer});
+ if(path.startsWith('/v4/'))return await proApi({db,uid,admin,req,data,route,covers,check,result,response,path,viewer});
  if(path==='/saved'&&req.method==='GET'){
  const offset=Math.max(0,Number(route.searchParams.get('offset'))||0);
  const r=await db.from('cineo_saved').select('show:cineo_shows!inner(*)',{count:'exact'}).eq('user_id',uid).eq('show.status','approved').eq('show.hidden',false).or('premiere_at.is.null,premiere_at.lte.'+new Date().toISOString(),{referencedTable:'show'}).order('created_at',{ascending:false}).range(offset,offset+49);

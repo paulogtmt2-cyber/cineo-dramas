@@ -33,6 +33,17 @@ jobs:
       - run: gradle -p android assembleDebug assembleDebugAndroidTest
         env:
           CINEO_DEBUG_KEYSTORE: ${{ runner.temp }}/cineo-signing/debug.keystore
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Parse and verify backend modules
+        run: node --experimental-strip-types ci/check_backend.mjs
+      - name: Verify profile and worker boundaries
+        run: node --experimental-strip-types --test ci/test_platform.mjs
+      - name: Verify public API boundaries
+        env:
+          CINEO_TEST_API: https://njyjwcjrirqmbvsizqar.supabase.co/functions/v1/cineo-preview
+        run: python3 ci/api-smoke.py
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules

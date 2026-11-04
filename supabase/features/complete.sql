@@ -1,0 +1,37 @@
+alter table public.cineo_shows add column banner_path text not null default '',add column finished boolean not null default false,add column category_ids bigint[] not null default '{}';
+alter table public.cineo_episodes add column client_upload_id uuid unique;
+create table public.cineo_categories(id bigint generated always as identity primary key,name text not null unique check(char_length(btrim(name)) between 1 and 50),position integer not null default 0,active boolean not null default true);
+create table public.cineo_preferences(user_id uuid primary key references auth.users(id) on delete cascade,genres text[] not null default '{}',onboarded boolean not null default false);
+create table public.cineo_ratings(user_id uuid references auth.users(id) on delete cascade,show_id bigint references public.cineo_shows(id) on delete cascade,stars integer not null check(stars between 1 and 5),primary key(user_id,show_id));
+create index cineo_ratings_show_idx on public.cineo_ratings(show_id);
+create table public.cineo_lists(id bigint generated always as identity primary key,user_id uuid not null references auth.users(id) on delete cascade,title text not null check(char_length(btrim(title)) between 1 and 80));
+create index cineo_lists_owner_idx on public.cineo_lists(user_id);
+create table public.cineo_list_items(list_id bigint references public.cineo_lists(id) on delete cascade,show_id bigint references public.cineo_shows(id) on delete cascade,primary key(list_id,show_id));
+create index cineo_list_items_show_idx on public.cineo_list_items(show_id);
+create table public.cineo_blocks(user_id uuid references auth.users(id) on delete cascade,target_id uuid references auth.users(id) on delete cascade,primary key(user_id,target_id),check(user_id<>target_id));
+create index cineo_blocks_target_idx on public.cineo_blocks(target_id);
+alter table public.cineo_comments add column pinned boolean not null default false;
+create table public.cineo_tickets(id bigint generated always as identity primary key,user_id uuid not null references auth.users(id) on delete cascade,subject text not null check(char_length(btrim(subject)) between 3 and 120),message text not null check(char_length(btrim(message)) between 3 and 2000),status text not null default 'open' check(status in ('open','answered','closed')),reply text not null default '' check(char_length(reply)<=4000),created_at timestamptz not null default now());
+create index cineo_tickets_owner_idx on public.cineo_tickets(user_id,id desc);
+create table public.cineo_review_log(id bigint generated always as identity primary key,show_id bigint not null references public.cineo_shows(id) on delete cascade,episode_id bigint references public.cineo_episodes(id) on delete cascade,previous_status text not null default '',status text not null,note text not null default '',created_at timestamptz not null default now());
+create index cineo_review_log_show_idx on public.cineo_review_log(show_id,id desc);
+create index cineo_review_log_episode_idx on public.cineo_review_log(episode_id);
+create table public.cineo_release(id integer primary key check(id=1),version_code integer not null,version_name text not null,notes text not null default '',download_url text not null default '');
+insert into public.cineo_release values(1,5,'0.5.0','Player vertical com navegação por deslize.','');
+do $$declare t text;begin foreach t in array array['cineo_categories','cineo_preferences','cineo_ratings','cineo_lists','cineo_list_items','cineo_blocks','cineo_tickets','cineo_review_log','cineo_release'] loop execute format('alter table public.%I enable row level security',t);execute format('revoke all on public.%I from anon,authenticated',t);execute format('grant all on public.%I to service_role',t);end loop;end $$;
+grant usage,select on sequence public.cineo_categories_id_seq,public.cineo_lists_id_seq,public.cineo_tickets_id_seq,public.cineo_review_log_id_seq to service_role;
+create function public.cineo_log_review() returns trigger language plpgsql security invoker set search_path='' as $$
+begin if tg_table_name='cineo_shows' then if tg_op='INSERT' or old.status is distinct from new.status then insert into public.cineo_review_log(show_id,previous_status,status,note)values(new.id,case when tg_op='INSERT' then '' else old.status end,new.status,new.reason);end if;else if tg_op='INSERT' or old.review_status is distinct from new.review_status then insert into public.cineo_review_log(show_id,episode_id,previous_status,status,note)values(new.show_id,new.id,case when tg_op='INSERT' then '' else old.review_status end,new.review_status,new.review_reason);end if;end if;return new;end $$;
+revoke all on function public.cineo_log_review() from public,anon,authenticated;
+grant execute on function public.cineo_log_review() to service_role;
+create trigger cineo_show_review_log after insert or update of status on public.cineo_shows for each row execute function public.cineo_log_review();
+create trigger cineo_episode_review_log after insert or update of review_status on public.cineo_episodes for each row execute function public.cineo_log_review();
+insert into public.cineo_review_log(show_id,status,note,created_at)select id,status,'Situação anterior à versão 0.6.',created_at from public.cineo_shows;
+create function public.cineo_rating(sid bigint,actor uuid) returns jsonb language sql stable security invoker set search_path='' as $$select jsonb_build_object('average',coalesce(round(avg(stars),1),0),'count',count(*),'mine',coalesce((select stars from public.cineo_ratings where show_id=sid and user_id=actor),0))from public.cineo_ratings where show_id=sid;$$;
+revoke all on function public.cineo_rating(bigint,uuid) from public,anon,authenticated;
+grant execute on function public.cineo_rating(bigint,uuid) to service_role;
+-- A retry of the same queued file returns the same episode instead of duplicating it.
+create function public.cineo_queued_episode(actor uuid,sid bigint,episode_title text,object_path text,season_number integer,chapter_number integer,seconds integer,upload_id uuid) returns bigint language plpgsql security invoker set search_path='' as $$declare s public.cineo_shows;eid bigint;begin select * into s from public.cineo_shows where id=sid for update;if s.id is null or s.owner_id is distinct from actor or s.status='pending' then raise exception 'Envio não permitido.';end if;select id into eid from public.cineo_episodes where show_id=sid and client_upload_id=upload_id;if eid is not null then return eid;end if;insert into public.cineo_episodes(show_id,title,storage_path,season,episode_number,duration_seconds,review_status,client_upload_id)values(sid,episode_title,object_path,season_number,chapter_number,seconds,case when s.status='approved' then 'draft' else 'approved' end,upload_id)returning id into eid;return eid;end $$;
+revoke all on function public.cineo_queued_episode(uuid,bigint,text,text,integer,integer,integer,uuid) from public,anon,authenticated;
+grant execute on function public.cineo_queued_episode(uuid,bigint,text,text,integer,integer,integer,uuid) to service_role;
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types) values('cineo-app','cineo-app',true,10485760,array['application/vnd.android.package-archive']) on conflict(id)do nothing;

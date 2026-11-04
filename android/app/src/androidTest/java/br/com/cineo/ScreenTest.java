@@ -28,8 +28,22 @@ public class ScreenTest {
   JSONObject draft=new JSONObject(show.toString()).put("id",2).put("title","Entre dois mundos").put("status","draft");
   JSONObject pending=new JSONObject(show.toString()).put("id",3).put("title","Céu de Agosto").put("status","pending");
   JSONArray episodes=new JSONArray().put(new JSONObject().put("id",11).put("title","O primeiro encontro").put("season",1).put("episode_number",1).put("review_status","draft").put("duration_seconds",20).put("url","https://example.test/video.mp4"));
+  ByteArrayOutputStream artBytes=new ByteArrayOutputStream();try(InputStream in=a.getResources().openRawResource(R.drawable.cinema_login)){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)artBytes.write(b,0,n);}final String artwork=android.util.Base64.encodeToString(artBytes.toByteArray(),2);
   java.util.concurrent.atomic.AtomicInteger posted=new java.util.concurrent.atomic.AtomicInteger();
   ui(()->{a.token="test-ui-only";a.uid="ui-fixture";a.email="criador@example.test";a.role="admin";a.expires=Long.MAX_VALUE;a.transport=(method,path,payload,bearer)->{
+   if(path.startsWith("/v6/art/"))return a.obj("image",artwork);
+   if(path.equals("/v6/preferences"))return a.obj("genres",new JSONArray().put("Drama"),"onboarded",true);
+   if(path.equals("/v6/categories"))return a.obj("items",new JSONArray().put(a.obj("id",1,"name","Maratonas","position",0,"active",true)));
+   if(path.equals("/v6/recommend"))return a.obj("items",new JSONArray());
+   if(path.endsWith("/related"))return a.obj("items",new JSONArray());
+   if(path.startsWith("/v6/rating"))return a.obj("average",4.5,"count",2,"mine",5);
+   if(path.equals("/v6/history"))return a.obj("items",new JSONArray().put(a.obj("episode_id",11,"position_ms",7000,"completed",false,"show",show,"episode",episodes.getJSONObject(0))),"next",JSONObject.NULL);
+   if(path.equals("/v6/lists"))return a.obj("items",new JSONArray().put(a.obj("id",7,"title","Fim de semana")));
+   if(path.startsWith("/v6/list/"))return a.obj("items",new JSONArray().put(show),"next",JSONObject.NULL);
+   if(path.equals("/v6/blocks"))return a.obj("items",new JSONArray().put(a.obj("target_id","00000000-0000-0000-0000-000000000001","name","Conta bloqueada")));
+   if(path.startsWith("/v6/support"))return a.obj("items",new JSONArray().put(a.obj("id",1,"subject","Ajuda com reprodução","message","Preciso de ajuda com um vídeo.","reply","Vamos verificar sua conexão.","status","answered")));
+   if(path.startsWith("/v6/review-log/"))return a.obj("items",new JSONArray().put(a.obj("status","approved","note","Produção aprovada.","created_at","2026-11-04T12:00:00Z")));
+   if(path.equals("/version"))return a.obj("version_code",6,"version_name","0.6.0","notes","Novos recursos e capas corrigidas.","download_url","");
    if(path.equals("/v4/progress"))return method.equals("POST")?a.obj("ok",true):a.obj("items",new JSONArray().put(a.obj("episode_id",11,"position_ms",7000,"duration_ms",20000,"completed",false,"episode",a.obj("show_id",1))));
    if(path.equals("/v4/home"))return a.obj("featured_id",1,"collections",new JSONArray().put(a.obj("title","Escolhas do Cineo","items",new JSONArray().put(show))),"upcoming",new JSONArray().put(new JSONObject(show.toString()).put("premiere_at","2026-12-01T22:00:00Z")));
    if(path.startsWith("/v4/show/")&&path.endsWith("/extras"))return a.obj("premiere_at",JSONObject.NULL,"trailer_url","","owner_id","ui-fixture");
@@ -73,7 +87,7 @@ public class ScreenTest {
   File sample=new File(a.getCacheDir(),"sample.mp4");try(InputStream in=InstrumentationRegistry.getInstrumentation().getContext().getAssets().open("sample.mp4");FileOutputStream out=new FileOutputStream(sample)){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);}
   JSONArray playable=new JSONArray().put(new JSONObject().put("id",99).put("title","Teste do player").put("subtitles","WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nLegenda do Cineo\n").put("url",sample.toURI().toString()));
   ui(()->a.play(show,playable,0,"catalog"));
-  final boolean[] prepared={false};for(int i=0;i<100&&!prepared[0];i++){ui(()->prepared[0]=a.video!=null&&a.video.getDuration()>0);Thread.sleep(100);}assertTrue("Player must decode H264 MP4",prepared[0]);capture("18-player");ui(()->{assertEquals(1,a.pro.cues.size());assertEquals(5000,a.pro.cues.get(0).end);a.pro.locked=true;a.controlsVisible(false);a.controlsVisible(true);assertEquals(android.view.View.GONE,a.playerControls.getVisibility());a.pro.locked=false;});
+  final boolean[] prepared={false};for(int i=0;i<100&&!prepared[0];i++){ui(()->prepared[0]=a.video!=null&&a.video.getDuration()>0);Thread.sleep(100);}assertTrue("Player must decode H264 MP4",prepared[0]);capture("18-player");ui(()->{a.complete.focus(true);assertEquals(android.view.View.GONE,a.drama.rail.getVisibility());assertEquals(android.view.View.VISIBLE,a.complete.focusButton.getVisibility());a.complete.focusButton.performClick();assertEquals(android.view.View.VISIBLE,a.drama.rail.getVisibility());a.complete.sleepDeadline=android.os.SystemClock.elapsedRealtime()-1;a.complete.tick();assertFalse("Sleep timer pauses video",a.video.isPlaying());a.video.start();assertEquals(1,a.pro.cues.size());assertEquals(5000,a.pro.cues.get(0).end);a.pro.locked=true;a.controlsVisible(false);a.controlsVisible(true);assertEquals(android.view.View.GONE,a.playerControls.getVisibility());a.pro.locked=false;});
   ui(()->{long base=android.os.SystemClock.uptimeMillis();float x=a.playerFrame.getWidth()*.85f,y=a.playerFrame.getHeight()*.32f;for(int k=0;k<4;k++){android.view.MotionEvent event=android.view.MotionEvent.obtain(base,base+k*45,k%2==0?android.view.MotionEvent.ACTION_DOWN:android.view.MotionEvent.ACTION_UP,x,y,0);a.playerFrame.dispatchTouchEvent(event);event.recycle();}});Thread.sleep(600);
   ui(()->{assertTrue("Double tap gesture seeks forward",a.video.getCurrentPosition()>5000);a.video.seekTo(0);});Thread.sleep(500);
   ui(()->{assertNotNull(a.media);a.togglePlayback();assertFalse(a.video.isPlaying());a.seekBy(10000);});Thread.sleep(500);
@@ -111,6 +125,23 @@ public class ScreenTest {
   ui(()->a.pro.reports());capture("35-reports");
   ui(()->a.pro.dataSettings());capture("36-data-settings");
   ui(()->{a.pro.captureLink(new android.content.Intent(android.content.Intent.ACTION_VIEW,android.net.Uri.parse("cineo://show/1")));assertTrue(a.pro.openLink());});settled();assertEquals("detail",a.screen);
+  ui(()->a.complete.support());capture("39-support-whatsapp");
+  ui(()->a.complete.newTicket());capture("40-new-support-ticket");
+  ui(()->a.complete.tickets(true));capture("41-support-admin");
+  ui(()->a.complete.history());capture("42-history");
+  ui(()->a.complete.lists());capture("43-personal-collections");
+  ui(()->{try{a.complete.list(a.obj("id",7,"title","Fim de semana"));}catch(Exception ex){throw new RuntimeException(ex);}});capture("44-collection-shows");
+  ui(()->a.complete.blocks());capture("45-blocked-users");
+  ui(()->a.complete.playbackSettings());capture("46-playback-preferences");
+  ui(()->a.complete.categories());capture("47-category-editor");
+  ui(()->a.complete.reviewLog(show));capture("48-review-history");
+  ui(()->a.complete.artwork(show));capture("49-artwork-formats");
+  ui(()->a.complete.version());capture("50-version");
+  ui(()->a.uploads.form(show));capture("51-batch-upload-form");
+  ui(()->a.uploads.screen());capture("52-upload-queue");
+  final android.widget.FrameLayout[] imageFrame={null};ui(()->{try{a.page("art-test","Capas recuperadas","",0,null);JSONObject network=new JSONObject(show.toString()).put("cover_url","").put("cover_path","fixture-test-v6");imageFrame[0]=a.art.poster(network,320,false);a.body.addView(imageFrame[0],new LinearLayout.LayoutParams(-1,a.dp(320)));}catch(Exception ex){throw new RuntimeException(ex);}});
+  final boolean[] loaded={false};for(int i=0;i<100&&!loaded[0];i++){ui(()->loaded[0]=((ImageView)imageFrame[0].getChildAt(0)).getDrawable()!=null);Thread.sleep(100);}assertTrue("Authenticated artwork must decode",loaded[0]);capture("53-authenticated-artwork");
+  ui(()->{android.graphics.Bitmap source=android.graphics.BitmapFactory.decodeResource(a.getResources(),R.drawable.cinema_login);a.complete.editor.banner=false;CoverEditor.CropView crop=a.complete.editor.new CropView(source,2f/3);crop.layout(0,0,360,480);android.graphics.Bitmap result=crop.export();assertEquals(720,result.getWidth());assertEquals(1080,result.getHeight());assertTrue("Crop has image pixels",result.getPixel(360,540)!=0);});
   ui(()->{a.clearSession();a.login(false);});
  }
 }

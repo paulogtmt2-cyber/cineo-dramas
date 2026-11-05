@@ -1,6 +1,13 @@
 # Cineo 0.11 — estúdio profissional
 
-Estado: código implementado; 35 testes Node e os testes transacionais de banco passaram. Compilação Android, regressão no emulador, homologação dos endpoints e publicação do APK ainda pendentes. Nenhum APK 0.11 foi publicado nesta etapa.
+Estado: publicado e verificado. 35 testes Node, 13 verificações de cache, testes transacionais com rollback, compilação e regressão no emulador passaram. A regressão Android gerou 140 capturas. Homologação: 19 consultas autenticadas; produção: 5 consultas autenticadas após implantação.
+
+Commit validado: `8b90762e30e0c84917a44eeaab9a4f6dcc6d4513`.
+CI: https://github.com/paulogtmt2-cyber/cineo-dramas/actions/runs/42087254930.
+APK: 5.955.173 bytes; SHA-256 `5d9cdc035913af421e5604b003256da37235af443d3b543e790aa272ab957949`.
+Certificado SHA-256: `b5755f77ddaa869b456d7134296947773cc1c89b217c7933841ffe54c487bc0e`, preservado desde as versões anteriores.
+Servidor: cineo v17, bundle `1ff2cea325f122ad084c17618c80c731f06b24c28af894fdfd59e9d4485d9dd5`.
+As capturas de instrumentação usam dados sintéticos explicitamente identificados; não representam ganhos ou audiência de contas reais.
 
 ## Funções
 
@@ -34,3 +41,9 @@ Os relatórios usam medições reais e prospectivas. Versões anteriores podem n
 ## Banco
 
 Ordem dos arquivos adicionais em supabase/features: studio_growth_private_tables, studio_role_grant_history, studio_team_permissions_audited, studio_audience_reports, studio_manual_finance_functions, studio_experiment_stats, studio_playback, studio_fraction_carry, studio_payment_note. Todos usam RLS e privilégios restritos ao servidor. Revogações de equipe preservam registros inativos.
+
+## Download
+
+https://njyjwcjrirqmbvsizqar.supabase.co/storage/v1/object/public/cineo-app/Cineo_Dramas_0.11.0.apk
+
+O download público foi conferido por SHA-256 após publicação e o endpoint de atualização anuncia version_code 11.

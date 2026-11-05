@@ -18,7 +18,7 @@ Novos capítulos de séries já publicadas podem ser enviados em conjunto para a
 
 ## Administração
 
-Painel em seis áreas: Resumo, Análises, Criadores, Financeiro, Catálogo e Sistema. Busca local por função, contadores reais e gráfico de views válidas em 7/30/90 dias. Perfis contam os cadastros públicos existentes, e criadores ativos contam os acessos aprovados; nenhuma métrica é inventada.
+Painel com seis áreas sempre visíveis, sem depender de rolagem horizontal: Resumo, Análises, Criadores, Financeiro, Catálogo e Sistema. Busca local por função, contadores reais e gráfico de views válidas em 7/30/90 dias. Perfis contam os cadastros públicos existentes, e criadores ativos contam os acessos aprovados; nenhuma métrica é inventada.
 
 As filas de produções e capítulos oferecem pesquisa por título, filtros por situação e paginação. A revisão mostra capa, ficha, condição técnica e prévias, assinando somente os vinte capítulos da página. Aprovação exige confirmação da revisão, validação técnica e acesso ativo do criador; recusa exige motivo. Decisões passam pela transação de moderação existente, com histórico e aviso ao criador. A equipe delegada mantém os casos atribuídos na central anterior.
 

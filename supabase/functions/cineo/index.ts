@@ -1,3 +1,4 @@
+import {publishingApi} from './publishing.ts';
 import {launchApi} from './launch.ts';
 import {studioApi,decorateExperiments} from './studio.ts';
 import {creatorsApi,creatorGate} from './creators.ts';
@@ -61,6 +62,7 @@ Deno.serve(async req=>{
  async function covers(rows:any[]){rows=rows.filter(s=>allowed(s,viewer));rows=await decorateExperiments({db,uid,result},rows);if(!rows.length)return [];const [metaResult,infoResult,urls,viewsResult]=await Promise.all([db.rpc('cineo_show_metadata',{ids:rows.map(s=>s.id)}),db.from('cineo_show_info').select('*').in('show_id',rows.map(s=>s.id)),signedPaths(db,'cineo-covers',rows.flatMap(s=>[s.cover_path,s.banner_path]).filter(Boolean)),db.rpc('cineo_public_views',{ids:rows.map(s=>s.id)})]);const viewCounts=result(viewsResult);const meta=result(metaResult),info=result(infoResult);return rows.map(s=>({...s,views:viewCounts.find((v:any)=>v.show_id===s.id)?.views||0,...meta.find((x:any)=>x.id===s.id),...info.find((x:any)=>x.show_id===s.id),cover_url:urls.get(s.cover_path)||'',banner_url:urls.get(s.banner_path)||'',cover_error:s.cover_path&&!urls.has(s.cover_path)?'Imagem indisponível':''}));}
  const ctx={db,uid,admin,req,data,route,receivedAt,covers,check,result,response,path,viewer,sid:sessionId,auth,email:identity.user.email};
  if(req.method==='POST'&&!['/logout'].includes(path)){const scope=path==='/v11/audience/impression'?'impressions':path.startsWith('/v10/view/')?'playback':path.startsWith('/v8/quality')?'quality':/\/(comments|report|support|polls|disputes)/.test(path)?'community':/uploads/.test(path)?'uploads':'actions';const limit=scope==='community'?30:scope==='quality'?30:scope==='uploads'?200:120;const ok=result(await db.rpc('cineo_request_budget',{actor:uid,bucket:scope,maximum:limit}));if(!ok)return response({error:'Muitas ações em pouco tempo. Aguarde um minuto.'},429);}
+ if(path.startsWith('/v13/'))return await publishingApi(ctx);
  if(path.startsWith('/v12/'))return await launchApi(ctx);
  if(path.startsWith('/v11/'))return await studioApi(ctx);
  if(path.startsWith('/v10/'))return await creatorsApi(ctx);

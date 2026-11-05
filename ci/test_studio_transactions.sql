@@ -6,7 +6,7 @@ do $$declare admin_id uuid;owner uuid;show_id bigint;episode bigint;object_path 
  if owner is null then raise exception 'A public fixture with an unenrolled non-admin owner is required';end if;
  if not exists(select 1 from public.cineo_follows where user_id=owner and kind='creator' and target=admin_id::text) then insert into public.cineo_follows(user_id,kind,target) values(owner,'creator',admin_id::text);if not exists(select 1 from public.cineo_follower_events where creator_id=admin_id and delta=1) then raise exception 'Follower history trigger failed';end if;end if;
  insert into public.cineo_creator_accounts(user_id,first_name,last_name,birth_date,status,approved_at) values(owner,'Fixture','Studio','1990-01-01','approved',now());
- insert into public.cineo_episodes(show_id,title,storage_path,season,episode_number,review_status,duration_seconds,media_state) values(show_id,'Rollback studio fixture','studio-fixture/'||gen_random_uuid()::text||'.mp4',999,9999,'approved',20,'ready') returning id into episode;
+ insert into public.cineo_episodes(show_id,title,storage_path,season,episode_number,review_status,duration_seconds,media_state) values(show_id,'Rollback studio fixture','studio-fixture/'||gen_random_uuid()::text||'.mp4',999,999,'approved',20,'ready') returning id into episode;
  insert into public.cineo_view_sessions(user_id,episode_id,last_at,source) values(admin_id,episode,now()-interval '20 seconds','search') returning id into run;
  result:=public.cineo_view_heartbeat(admin_id,run,10000,10000);
  if result->>'new_view'<>'true' then raise exception 'Qualified playback failed';end if;

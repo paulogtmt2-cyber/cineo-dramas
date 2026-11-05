@@ -1,0 +1,38 @@
+-- Fixtures exist only inside this rolled-back transaction. No files are uploaded or paid.
+begin;
+do $$declare owner uuid;adm uuid;sid bigint;limit_sid bigint;eid bigint;new_eid bigint;cid uuid;doc jsonb;draft_uuid uuid:=gen_random_uuid();fields jsonb:='{"title":"Publicação em etapas","synopsis":"História de teste transacional","genre":"Drama","rating":"Livre","format":"mini"}';begin
+ select user_id into adm from public.cineo_admins limit 1;
+ select id into owner from auth.users where id<>adm limit 1;
+ insert into public.cineo_creator_accounts(user_id,first_name,last_name,birth_date,status,approved_at) values(owner,'Workflow','Fixture','1990-01-01','approved',now()) on conflict(user_id) do update set status='approved';
+ doc:=public.cineo_save_production(owner,null,draft_uuid,fields,owner::text||'/fixture.jpg');sid:=(doc->>'id')::bigint;
+ if doc->>'format'<>'mini' then raise exception 'Production format was lost';end if;
+ doc:=public.cineo_save_production(owner,null,draft_uuid,fields,owner::text||'/fixture.jpg');if (doc->>'id')::bigint<>sid then raise exception 'Retry created duplicate production';end if;
+ begin perform public.cineo_save_production(adm,sid,draft_uuid,fields,adm::text||'/fixture.jpg');raise exception 'WRONG_OWNER_EDIT';exception when others then if sqlerrm='WRONG_OWNER_EDIT' then raise;end if;end;
+ begin perform public.cineo_submit_production(owner,sid,true);raise exception 'EMPTY_SERIES_SUBMITTED';exception when others then if sqlerrm='EMPTY_SERIES_SUBMITTED' then raise;end if;end;
+ insert into public.cineo_episodes(show_id,title,storage_path,season,episode_number,review_status,media_state) values(sid,'Capítulo de teste','workflow/'||gen_random_uuid()||'.mp4',1,1,'approved','queued') returning id into eid;
+ begin perform public.cineo_submit_production(owner,sid,true);raise exception 'UNVALIDATED_MEDIA_SUBMITTED';exception when others then if sqlerrm='UNVALIDATED_MEDIA_SUBMITTED' then raise;end if;end;
+ update public.cineo_episodes set media_state='ready' where id=eid;update public.cineo_media_jobs set status='ready' where episode_id=eid;
+ begin perform public.cineo_submit_production(owner,sid,false);raise exception 'RIGHTS_NOT_ACCEPTED';exception when others then if sqlerrm='RIGHTS_NOT_ACCEPTED' then raise;end if;end;
+ perform public.cineo_submit_production(owner,sid,true);perform public.cineo_submit_production(owner,sid,true);
+ select id into cid from public.cineo_cases where kind='show' and target_id=sid::text and status='open';if cid is null then raise exception 'Submission did not reach admin queue';end if;
+ begin perform public.cineo_save_production(owner,sid,draft_uuid,fields,owner::text||'/fixture.jpg');raise exception 'PENDING_EDIT_ALLOWED';exception when others then if sqlerrm='PENDING_EDIT_ALLOWED' then raise;end if;end;
+ begin perform public.cineo_admin_production_review(owner,sid,'approved','');raise exception 'NONADMIN_APPROVAL';exception when others then if sqlerrm='NONADMIN_APPROVAL' then raise;end if;end;
+ perform public.cineo_admin_production_review(adm,sid,'rejected','Corrija os créditos de teste');
+ if not exists(select 1 from public.cineo_shows where id=sid and status='rejected' and reason='Corrija os créditos de teste') then raise exception 'Rejection reason was lost';end if;
+ perform public.cineo_save_production(owner,sid,draft_uuid,fields,owner::text||'/fixture.jpg');perform public.cineo_submit_production(owner,sid,true);
+ update public.cineo_creator_accounts set status='banned' where user_id=owner;
+ begin perform public.cineo_admin_production_review(adm,sid,'approved','');raise exception 'BANNED_OWNER_APPROVED';exception when others then if sqlerrm='BANNED_OWNER_APPROVED' then raise;end if;end;
+ update public.cineo_creator_accounts set status='approved' where user_id=owner;perform public.cineo_admin_production_review(adm,sid,'approved','Revisado');
+ if not exists(select 1 from public.cineo_shows where id=sid and status='approved') then raise exception 'Admin approval failed';end if;
+ new_eid:=public.cineo_queued_episode(owner,sid,'Novo capítulo','workflow/'||gen_random_uuid()||'.mp4',1,2,20,gen_random_uuid());
+ update public.cineo_episodes set media_state='ready' where id=new_eid;update public.cineo_media_jobs set status='ready' where episode_id=new_eid;perform public.cineo_submit_new_chapters(owner,sid,true);
+ if not exists(select 1 from public.cineo_episodes where id=new_eid and review_status='pending') or not exists(select 1 from public.cineo_shows where id=sid and status='approved') then raise exception 'Chapter review changed the live series';end if;
+ select id into cid from public.cineo_cases where kind='episode' and target_id=new_eid::text and status='open';if cid is null then raise exception 'New chapter did not reach admin queue';end if;
+ perform public.cineo_decide_case(adm,cid,'approved','Reviewed chapter');
+ insert into public.cineo_shows(owner_id,title,synopsis) values(owner,'1000 chapter fixture','Rollback only') returning id into limit_sid;
+ insert into public.cineo_episodes(show_id,title,storage_path,season,episode_number) select limit_sid,'Chapter '||n,'workflow-cap/'||gen_random_uuid()||'.mp4',1,n from generate_series(1,1000)n;
+ if (public.cineo_publishing_check(limit_sid)->>'total')::int<>1000 then raise exception '1000 chapters not accepted';end if;
+ begin insert into public.cineo_episodes(show_id,title,storage_path,season,episode_number) values(limit_sid,'1001','workflow-cap/'||gen_random_uuid()||'.mp4',2,1);raise exception 'CHAPTER_CAP_BYPASSED';exception when others then if sqlerrm='CHAPTER_CAP_BYPASSED' then raise;end if;end;
+ doc:=public.cineo_app_dashboard(7);if jsonb_array_length(doc->'daily')<>7 then raise exception 'Dashboard date range invalid';end if;
+end$$;
+rollback;

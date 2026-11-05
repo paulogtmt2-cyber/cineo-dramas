@@ -11,7 +11,7 @@ export async function context(c:any){const {db,uid,viewer,check,result}=c;const 
  const progress=async()=>{const table=viewer?'cineo_viewer_progress':'cineo_progress',column=viewer?'viewer_id':'user_id',value=viewer?.id||uid;return result(await db.from(table).select('*,episode:cineo_episodes!inner(*,show:cineo_shows!inner(*))').eq(column,value).order('updated_at',{ascending:false}).limit(1000)).filter((p:any)=>released(p.episode.show)&&allowed(p.episode.show,viewer)&&aired(p.episode));};
  const choices=async()=>result(await db.from('cineo_library_choices').select('*').eq('user_id',uid).eq('viewer_key',vk));
  const flag=async(name:string)=>{const row=result(await db.from('cineo_feature_flags').select('percentage').eq('name',name).maybeSingle());return !row||parseInt((await digest(uid+':'+name)).slice(0,8),16)%100<row.percentage;};
- const enrich=async(rows:any[])=>{if(!rows.length)return [];const metadata=result(await db.from('cineo_show_info').select('*').in('show_id',rows.map(s=>s.id)));return (await c.covers(rows)).map((s:any)=>({...s,...(metadata.find((m:any)=>m.show_id===s.id)||{themes:[],warnings:[],lifecycle:s.finished?'complete':'ongoing'})}));};
+ const enrich=async(rows:any[])=>{if(!rows.length)return [];return (await c.covers(rows)).map((s:any)=>({themes:[],warnings:[],lifecycle:s.finished?'complete':'ongoing',...s}));};
  const catalogue=async()=>result(await db.from('cineo_shows').select('*').eq('status','approved').eq('hidden',false).order('id',{ascending:false}).limit(1000)).filter((s:any)=>released(s)&&allowed(s,viewer));
  return {...c,vk,staff,readShow,pub,creator,episode,settings,progress,choices,flag,enrich,catalogue};
 }

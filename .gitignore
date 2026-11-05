@@ -1,7 +1,7 @@
-.gradle/
 **/build/
-local.properties
+**/.gradle/
+**/local.properties
+**/*.keystore
+**/*.jks
 **/__pycache__/
-**/data/
-*.keystore
-*.jks
+*.pyc

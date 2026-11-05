@@ -30,6 +30,8 @@ jobs:
             keytool -genkeypair -keystore "$RUNNER_TEMP/cineo-signing/debug.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
           fi
       - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Verify cache isolation and mutation behavior
+        run: python3 ci/test_cache.py
       - run: gradle -p android assembleDebug assembleDebugAndroidTest
         env:
           CINEO_DEBUG_KEYSTORE: ${{ runner.temp }}/cineo-signing/debug.keystore
@@ -42,7 +44,7 @@ jobs:
         run: node --experimental-strip-types --test ci/test_platform.mjs
       - name: Verify public API boundaries
         env:
-          CINEO_TEST_API: https://njyjwcjrirqmbvsizqar.supabase.co/functions/v1/cineo-preview
+          CINEO_TEST_API: https://njyjwcjrirqmbvsizqar.supabase.co/functions/v1/cineo
         run: python3 ci/api-smoke.py
       - name: Enable KVM
         run: |

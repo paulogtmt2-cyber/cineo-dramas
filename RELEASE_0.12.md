@@ -1,6 +1,6 @@
 # Cineo 0.12 — Clipes e missões de lançamento
 
-Estado: implementação em validação. Não confundir capturas e números sintéticos de instrumentação com métricas ou saldos de produção.
+Estado: publicado e verificado. Não confundir capturas e números sintéticos de instrumentação com métricas ou saldos de produção.
 
 ## Clipes
 
@@ -24,4 +24,21 @@ O simulador é local, identificado e não cria contas, engajamento público ou c
 
 ## Validação
 
-44 testes Node e cenários transacionais com rollback passaram (publicação, agendamento, repetição, suspensão, orçamento, bônus, reserva e cancelamento). Compilação Android, 156 capturas previstas, homologação e APK final ainda pendentes.
+44 testes Node, 13 verificações de cache, cenários transacionais com rollback e a regressão financeira anterior passaram. Os cenários cobrem publicação, agendamento, primeira série única entre produções, repetição, suspensão, orçamento, bônus, reserva e cancelamento. A compilação e a regressão Android passaram com 156 capturas. Nove consultas autenticadas passaram na homologação e outras nove em produção. Nenhum bônus real foi concedido nos testes.
+
+
+Commit validado: `21b3170d86788c929754ea2ddc164fc4c0506c4a`.
+CI: https://github.com/paulogtmt2-cyber/cineo-dramas/actions/runs/42103128674.
+Servidor cineo v18: bundle `aa75111f7e7cea9fbbe1bb218385b8d6aa58b5fd4da086a4087ad029b4750cb6`.
+APK: 5.971.453 bytes; SHA-256 `a8d533828a4c405d88f92e6ce973d868528dd6a575164318f407b9ba3ed82aad`.
+Certificado SHA-256: `b5755f77ddaa869b456d7134296947773cc1c89b217c7933841ffe54c487bc0e`, preservado desde as versões anteriores.
+
+## Acesso
+
+Clipes: nova aba na navegação inferior. Missões: Perfil → Estúdio → Missões do Criador. Administração: Operações → Estúdios e financeiro → Lançamento e Clipes. Regras dos saques permanecem separadas das regras das missões.
+
+## Download
+
+https://njyjwcjrirqmbvsizqar.supabase.co/storage/v1/object/public/cineo-app/Cineo_Dramas_0.12.0.apk
+
+O download público foi conferido por SHA-256 após a publicação e o endpoint de atualização anuncia version_code 12.

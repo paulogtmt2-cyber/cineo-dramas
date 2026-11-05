@@ -1,0 +1,12 @@
+create function public.cineo_follower_event() returns trigger language plpgsql security invoker set search_path='' as $$declare r public.cineo_follows;begin r:=case when tg_op='DELETE' then old else new end;if r.kind='creator' and r.target<>r.user_id::text then insert into public.cineo_follower_events(creator_id,delta) select owner_id,case when tg_op='DELETE' then -1 else 1 end from public.cineo_shows where owner_id::text=r.target group by owner_id;end if;return null;end$$;
+create trigger cineo_follow_history after insert or delete on public.cineo_follows for each row execute function public.cineo_follower_event();
+create function public.cineo_studio_role(actor uuid,owner uuid) returns text language sql stable security invoker set search_path='' as $$select case when exists(select 1 from public.cineo_admins where user_id=actor) then 'admin' when actor=owner then 'owner' else coalesce((select role from public.cineo_creator_roles where creator_id=owner and user_id=actor and active),'') end$$;
+create function public.cineo_studio_delegate(actor uuid,owner uuid,member uuid,member_role text) returns jsonb language plpgsql security invoker set search_path='' as $$begin
+ if public.cineo_studio_role(actor,owner) not in('owner','admin') then raise exception 'Somente o proprietário gerencia permissões';end if;
+ if member=owner or member_role not in('editor','producer','finance','remove') then raise exception 'Permissão inválida';end if;
+ if member_role='remove' then update public.cineo_creator_roles set active=false where creator_id=owner and user_id=member;else insert into public.cineo_creator_roles(creator_id,user_id,role,active) values(owner,member,member_role,true) on conflict(creator_id,user_id) do update set role=excluded.role,active=true;end if;
+ insert into public.cineo_studio_audit(creator_id,actor_id,action,detail) values(owner,actor,'delegate',jsonb_build_object('member',member,'role',member_role));return jsonb_build_object('ok',true);
+end$$;
+
+do $$declare p record;begin for p in select oid::regprocedure signature from pg_proc where pronamespace='public'::regnamespace and proname in('cineo_follower_event','cineo_studio_role','cineo_studio_delegate','cineo_studio_new_show','cineo_studio_report','cineo_episode_retention','cineo_review_month','cineo_request_withdrawal','cineo_review_withdrawal','cineo_studio_finance') loop execute format('revoke all on function %s from public,anon,authenticated',p.signature);execute format('grant execute on function %s to service_role',p.signature);end loop;end$$;
+

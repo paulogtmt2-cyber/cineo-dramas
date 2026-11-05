@@ -1,0 +1,32 @@
+package br.com.cineo;
+import org.json.*;
+/** Synthetic data only for Android instrumentation, never bundled with the application. */
+class StudioFixture {
+ final MainActivity a;final JSONObject show;String role="",payment="requested",experiment="pending";boolean enabled=false;int posts=0;JSONObject last=new JSONObject();
+ StudioFixture(MainActivity activity,JSONObject story){a=activity;show=story;}
+ String role(){return role.isEmpty()?(a.role.equals("admin")?"admin":"owner"):role;}
+ JSONObject rules()throws Exception{return a.obj("enabled",enabled,"minimum_cents",1000,"terms","Regras de teste: pagamentos conferidos manualmente.","revision",1);}
+ JSONObject finance()throws Exception{return a.obj("rules",rules(),"available_cents",5000,"can_request",!role().equals("finance"),"months",new JSONArray().put(a.obj("month","2026-10-01","views",125000,"gross_cents",5000)),"settlements",new JSONArray().put(a.obj("month","2026-10-01","approved_cents",5000,"reason","Revisão de teste")),"withdrawals",new JSONArray());}
+ JSONObject report()throws Exception{String r=role();boolean money=r.equals("owner")||r.equals("admin")||r.equals("finance");JSONArray daily=new JSONArray().put(a.obj("day","2026-11-03","views",1000,"follower_delta",2,"estimated_cents",40)).put(a.obj("day","2026-11-04","views",750,"follower_delta",-1,"estimated_cents",30)).put(a.obj("day","2026-11-05","views",750,"follower_delta",3,"estimated_cents",30));JSONObject series=new JSONObject(show.toString()).put("views",2500).put("estimated_cents",100);if(!money){series.remove("estimated_cents");for(int i=0;i<daily.length();i++)daily.getJSONObject(i).remove("estimated_cents");}return a.obj("views",2500,"followers",12,"daily",daily,"previous_views",2000,"change_percent",25,"watched_seconds",7200,"new_viewers",5,"returning_viewers",3,"finished_sessions",8,"qualified_sessions",10,"series",new JSONArray().put(series),"funnel",new JSONArray().put(a.obj("id",11,"n",1,"title","Primeiro encontro","viewers",10,"first_episode_cohort",10,"cohort_size",10)).put(a.obj("id",12,"n",2,"title","Uma escolha","viewers",7,"first_episode_cohort",6,"cohort_size",10)),"sources",new JSONArray().put(a.obj("source","search","views",1700)).put(a.obj("source","home","views",800)),"hours",new JSONArray().put(a.obj("weekday",4,"hour",20,"views",500)),"alert","growth","role",r,"financial",money,"creative",!r.equals("finance"),"producer",!r.equals("editor")&&!r.equals("finance"),"manager",r.equals("owner")||r.equals("admin"),"measurement_note","Dados sintéticos usados somente para testar as telas.");}
+ JSONObject test()throws Exception{return a.obj("id","11111111-1111-1111-1111-111111111111","show_id",1,"kind","title","baseline_title",show.optString("title"),"alternative","Um novo caminho","status",experiment,"results",new JSONArray().put(a.obj("variant",0,"impressions",100,"starts",10,"qualified_views",8)).put(a.obj("variant",1,"impressions",120,"starts",20,"qualified_views",15)));}
+ JSONObject request(String method,String path,JSONObject data)throws Exception{boolean post=method.equals("POST");if(post){posts++;last=data==null?new JSONObject():new JSONObject(data.toString());}
+ if(path.startsWith("/v11/analytics"))return report();
+ if(path.startsWith("/v11/retention"))return a.obj("title","Primeiro encontro","points",new JSONArray().put(a.obj("second",0,"viewers",10)).put(a.obj("second",1,"viewers",8)).put(a.obj("second",2,"viewers",6)));
+ if(path.startsWith("/v11/goals"))return a.obj("manager",true,"items",new JSONArray().put(a.obj("id","11111111-1111-1111-1111-111111111111","metric","views","current",2500,"target",5000,"deadline","2027-01-01")));
+ if(path.startsWith("/v11/finance"))return finance();
+ if(path.startsWith("/v11/audit"))return a.obj("items",new JSONArray().put(a.obj("action","month_closed","created_at","2026-11-01T12:00:00Z","detail",a.obj("month","2026-10-01","approved_cents",5000,"reason","Revisão de teste"))));
+ if(path.startsWith("/v11/team"))return a.obj("items",new JSONArray().put(a.obj("user_id","22222222-2222-2222-2222-222222222222","role","finance")));
+ if(path.startsWith("/v11/shared"))return a.obj("items",new JSONArray().put(a.obj("creator_id","33333333-3333-3333-3333-333333333333","role","finance")));
+ if(path.startsWith("/v11/documents"))return a.obj("producer",true,"items",new JSONArray().put(a.obj("id","11111111-1111-1111-1111-111111111111","show_id",1,"name","Licença da trilha","kind","music","expires_on","2027-01-01")));
+ if(path.startsWith("/v11/disputes"))return a.obj("can_review",a.role.equals("admin"),"items",new JSONArray().put(a.obj("id","11111111-1111-1111-1111-111111111111","show_id",1,"message","Relato de teste sobre os direitos da trilha sonora.","status","open","reply","","proof_id",JSONObject.NULL)));
+ if(path.startsWith("/v11/experiments"))return a.obj("producer",true,"items",new JSONArray().put(test()));
+ if(path.startsWith("/v11/admin/experiments")){if(post)experiment=data.optString("status");return a.obj("items",experiment.equals("pending")?new JSONArray().put(test()):new JSONArray());}
+ if(path.startsWith("/v11/admin/payout-rules")){if(post)enabled=data.optBoolean("enabled");return rules();}
+ if(path.startsWith("/v11/admin/settlements"))return a.obj("items",new JSONArray().put(a.obj("creator_id","33333333-3333-3333-3333-333333333333","creator_name","Criador de teste","month","2026-10-01","views",125000,"gross_cents",5000)));
+ if(path.startsWith("/v11/admin/withdrawals")){if(post)payment=data.optString("status");return a.obj("items",new JSONArray().put(a.obj("id","11111111-1111-1111-1111-111111111111","creator_id","33333333-3333-3333-3333-333333333333","amount_cents",2000,"status",payment,"pix_hint","email · ***test","created_at","2026-11-05T12:00:00Z")));}
+ if(path.startsWith("/v11/admin/withdrawal/"))return a.obj("id","11111111-1111-1111-1111-111111111111","creator_id","33333333-3333-3333-3333-333333333333","amount_cents",2000,"status",payment,"destination",a.obj("holder","Titular de teste","type","email","value","fixture@example.test"),"warning","Pagamento realizado fora do aplicativo.");
+ if(path.startsWith("/v11/export"))return a.obj("filename","Cineo-teste.csv","csv","Data;Views\n2026-11-05;2500");
+ if(path.startsWith("/v11/media-kit"))return a.obj("profile",a.obj("name","Criador de teste","bio","Histórias independentes"),"views",2500,"followers",12,"watched_seconds",7200,"series",new JSONArray().put(a.obj("title",show.optString("title"),"views",2500)),"generated_at","2026-11-05T12:00:00Z");
+ return a.obj("ok",true);
+ }
+}

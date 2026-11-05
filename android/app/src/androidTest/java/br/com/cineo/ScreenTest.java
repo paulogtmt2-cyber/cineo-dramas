@@ -31,6 +31,7 @@ public class ScreenTest {
   ByteArrayOutputStream artBytes=new ByteArrayOutputStream();try(InputStream in=a.getResources().openRawResource(R.drawable.cinema_login)){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)artBytes.write(b,0,n);}final String artwork=android.util.Base64.encodeToString(artBytes.toByteArray(),2);
   java.util.concurrent.atomic.AtomicInteger posted=new java.util.concurrent.atomic.AtomicInteger();
   ui(()->{a.token="test-ui-only";a.uid="ui-fixture";a.email="criador@example.test";a.role="admin";a.expires=Long.MAX_VALUE;a.transport=(method,path,payload,bearer)->{
+   if(path.equals("/v8/home"))return a.obj("choices",new JSONArray(),"recommendations",new JSONArray().put(show),"notices",new JSONArray(),"watch_minutes",0,"orientation","auto");
    if(path.startsWith("/v8/bootstrap"))return a.obj("shortcuts",new JSONArray(),"staff","admin","workspace",true,"pending_reviews",0,"open_tickets",0,"notices",new JSONArray(),"watch_minutes",0,"orientation","auto","sensitive_swipe",false);
    if(path.equals("/v8/preferences"))return a.obj("revision",1,"watch_minutes",0,"orientation","auto","sensitive_swipe",false,"hide_completed",false);
    if(path.startsWith("/v8/library")||path.equals("/v8/recommendations")||path.startsWith("/v8/search"))return a.obj("items",new JSONArray().put(new JSONObject(show.toString()).put("remaining_seconds",80).put("recommendation_reason","Porque você escolheu Drama")),"next",JSONObject.NULL);

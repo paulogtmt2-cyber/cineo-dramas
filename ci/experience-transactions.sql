@@ -1,6 +1,6 @@
 -- All fixtures and state changes are rolled back; no published series is edited.
 begin;
-do $$declare actor uuid;other uuid;sid bigint;e1 bigint;e2 bigint;cid uuid;pid uuid;rid bigint;v jsonb;blocked boolean:=false;begin
+do $$declare actor uuid;other uuid;sid bigint;e1 bigint;e2 bigint;cid uuid;pid uuid;rid bigint;ticket bigint;poll uuid;survey uuid;v jsonb;snapshot jsonb;blocked boolean:=false;begin
  select user_id into actor from public.cineo_admins limit 1;
  select owner_id into other from public.cineo_shows where owner_id<>actor limit 1;
  if actor is null or other is null then raise exception 'Two existing account fixtures are required';end if;
@@ -32,6 +32,22 @@ do $$declare actor uuid;other uuid;sid bigint;e1 bigint;e2 bigint;cid uuid;pid u
  update public.cineo_cases set status='open' where id=cid;
  perform public.cineo_decide_case(actor,cid,'restore','Recurso conferido');
  if(select hidden from public.cineo_shows where id=sid)then raise exception 'Report restoration failed';end if;
+ insert into public.cineo_tickets(user_id,subject,message) values(actor,'Conferência de atendimento','Mensagem técnica para conferir o suporte.') returning id into ticket;
+ select id into cid from public.cineo_cases where kind='ticket' and target_id=ticket::text;
+ update public.cineo_staff set role='support' where user_id=other;update public.cineo_cases set assignee=other where id=cid;
+ perform public.cineo_decide_case(other,cid,'resolved','Atendimento conferido.');
+ if(select reply from public.cineo_tickets where id=ticket)<>'Atendimento conferido.' then raise exception 'Support response was not saved';end if;
+ insert into public.cineo_polls(show_id,question,options,closes_at) values(sid,'Qual capítulo você prefere?',array['Um','Dois'],now()+interval '1 day')returning id into poll;
+ insert into public.cineo_poll_votes(poll_id,user_id,viewer_key,choice)values(poll,actor,'account',0),(poll,other,'account',1);
+ v:=public.cineo_poll_results(poll,actor,'account');if v->'counts'<>'[1,1]'::jsonb or(v->>'mine')::int<>0 then raise exception 'Poll aggregation failed';end if;
+ insert into public.cineo_surveys(question,options)values('Como foi o teste?',array['Bom','Regular'])returning id into survey;
+ insert into public.cineo_survey_votes(survey_id,user_id,choice)values(survey,actor,0);
+ if public.cineo_survey_results(survey)->'counts'<>'[1,0]'::jsonb then raise exception 'Survey aggregation failed';end if;
+ if not public.cineo_request_budget(actor,'rollback-test',1) or public.cineo_request_budget(actor,'rollback-test',1) then raise exception 'Request budget failed';end if;
+ insert into public.cineo_library_choices(user_id,viewer_key,show_id,state)values(actor,'account',sid,'completed');
+ snapshot:=public.cineo_backup_snapshot();delete from public.cineo_library_choices where user_id=actor and show_id=sid;
+ v:=public.cineo_restore_metadata(snapshot,true);
+ if not(v->>'ok')::boolean or not exists(select 1 from public.cineo_library_choices where user_id=actor and show_id=sid and state='completed')then raise exception 'Missing-only recovery failed';end if;
 end$$;
-select public.cineo_restore_metadata(public.cineo_backup_snapshot(),false)->>'ok' as recovery_probe;
+select 'progress, reorder, review, restore, support, polls, survey, rate limit, missing-only backup recovery passed' as checks;
 rollback;

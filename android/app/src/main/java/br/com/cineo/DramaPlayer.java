@@ -24,13 +24,13 @@ class DramaPlayer {
  void click(View v,Runnable action){v.setOnClickListener(x->{if(!a.pro.locked&&!changing){x.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY);action.run();}});}
  void open(JSONObject show,JSONArray episodes,int index,String origin){
   JSONObject e=episodes.optJSONObject(index);if(e==null)return;
-  a.page("player","","",-1,()->a.details(show,origin));a.root.removeAllViews();a.root.setBackgroundColor(Color.BLACK);a.getWindow().setNavigationBarColor(Color.BLACK);
+  a.page("player","","",-1,()->{if(origin.equals("moderation"))a.moderationDesk.detail(a.moderationDesk.caseId);else a.details(show,origin);});a.root.removeAllViews();a.root.setBackgroundColor(Color.BLACK);a.getWindow().setNavigationBarColor(Color.BLACK);
   a.activeShow=show;a.currentShow=show;a.activeEpisodes=episodes;a.activeIndex=index;a.activeOrigin=origin;a.playingEpisode=e.optInt("id");a.media=null;a.playbackSpeed=1;a.socialReady=false;a.socialWorking=false;a.liked=false;a.socialSaved=false;a.scrubbing=false;a.pro.locked=false;
   active=true;changing=false;immersive=false;episode=e;page=a.generation;
   frame=new EpisodeFrame();a.playerFrame=frame;a.root.addView(frame,new LinearLayout.LayoutParams(-1,0,1));frame.setBackgroundColor(Color.BLACK);
   LinearLayout layout=a.col();frame.addView(layout,new FrameLayout.LayoutParams(-1,-1));
   LinearLayout header=a.row();header.setPadding(d(12),0,d(12),0);layout.addView(header,new LinearLayout.LayoutParams(-1,d(48)));
-  FrameLayout back=iconButton("back","Voltar para a série",()->a.details(show,origin));header.addView(back,new LinearLayout.LayoutParams(d(40),d(44)));
+  FrameLayout back=iconButton("back","Voltar para a série",()->{if(origin.equals("moderation"))a.moderationDesk.detail(a.moderationDesk.caseId);else a.details(show,origin);});header.addView(back,new LinearLayout.LayoutParams(d(40),d(44)));
   episodeTitle=words("EP."+e.optInt("episode_number",index+1),17);header.addView(episodeTitle,new LinearLayout.LayoutParams(0,-2,1));
   a.speedControl=words("1×",14);a.speedControl.setGravity(Gravity.CENTER);a.speedControl.setContentDescription("Velocidade de reprodução");header.addView(a.speedControl,new LinearLayout.LayoutParams(d(44),d(44)));click(a.speedControl,()->a.speedMenu());
   stage=new FrameLayout(a);stage.setBackgroundColor(Color.BLACK);layout.addView(stage,new LinearLayout.LayoutParams(-1,0,1));

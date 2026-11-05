@@ -5,9 +5,9 @@ for path in ['/health','/version','/guest']:
     with urllib.request.urlopen(BASE+path,timeout=30) as response:
         assert response.status==200
         data=json.load(response)
-        if path=='/health':assert data['ok'] and data['version']=='0.7.0'
+        if path=='/health':assert data['ok'] and data['version']=='0.8.0'
         if path=='/guest':assert all(x['status']=='approved' and not x['hidden'] for x in data['items'])
-for path in ['/v7/devices','/v7/health','/v7/worker/claim']:
+for path in ['/v7/devices','/v7/health','/v7/worker/claim','/v8/bootstrap','/v8/desk/home','/v8/ops/backups']:
     try:urllib.request.urlopen(BASE+path,timeout=30)
     except urllib.error.HTTPError as e:assert e.code in (400,401,403)
     else:raise AssertionError('Private endpoint allowed anonymous request')

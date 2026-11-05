@@ -1,0 +1,34 @@
+alter table public.cineo_collections add column description text not null default '' check(length(description)<=500);
+create function public.cineo_survey_results(sid uuid) returns jsonb language sql stable security invoker set search_path='' as $$select jsonb_build_object('counts',(select jsonb_agg(n order by option) from(select option,count(v.user_id) as n from generate_series(0,cardinality(p.options)-1)option left join public.cineo_survey_votes v on v.survey_id=p.id and v.choice=option group by option)x)) from public.cineo_surveys p where p.id=sid$$;
+create function public.cineo_quality_summary() returns jsonb language sql stable security invoker set search_path='' as $$select jsonb_build_object('samples',count(*),'startup_average_ms',coalesce(round(avg(startup_ms)),0),'stalls',coalesce(sum(stall_count),0),'stall_ms',coalesce(sum(stall_ms),0)) from public.cineo_playback_quality where updated_at>=now()-interval '30 days'$$;
+revoke all on function public.cineo_survey_results(uuid),public.cineo_quality_summary() from public,anon,authenticated;
+grant execute on function public.cineo_survey_results(uuid),public.cineo_quality_summary() to service_role;
+
+create or replace function public.cineo_decide_case(actor uuid,cid uuid,decision text,note text) returns void language plpgsql security invoker set search_path='' as $$declare c public.cineo_cases;r text;s public.cineo_shows;e public.cineo_episodes;p public.cineo_proposals;patch jsonb;reportrow public.cineo_reports;begin
+ select * into c from public.cineo_cases where id=cid for update;if c.id is null or c.status<>'open' then raise exception 'Caso indisponível';end if;
+ if exists(select 1 from public.cineo_admins where user_id=actor) then r:='admin';else select role into r from public.cineo_staff where user_id=actor;if c.assignee is distinct from actor then raise exception 'Caso atribuído a outra pessoa';end if;end if;
+ if r is null or (c.kind='ticket' and r not in ('admin','support')) or(c.kind<>'ticket' and r not in ('admin','reviewer')) then raise exception 'Acesso restrito';end if;
+ if decision not in ('approved','rejected','resolved','dismissed','restore') or length(note)>2000 or(decision='rejected' and length(trim(note))<3) then raise exception 'Decisão ou motivo inválidos';end if;
+ if c.kind='show' then select * into s from public.cineo_shows where id=c.target_id::bigint for update;if s.status<>'pending' or decision not in ('approved','rejected') then raise exception 'Produção não está em análise';end if;if decision='approved' and exists(select 1 from public.cineo_media_jobs j join public.cineo_episodes ep on ep.id=j.episode_id where ep.show_id=s.id and j.status<>'ready') then raise exception 'Vídeos ainda não validados';end if;update public.cineo_shows set status=decision,reason=case when decision='rejected' then note else '' end where id=s.id;if decision='approved' then perform public.cineo_notify(s.id,null);end if;
+ elsif c.kind='episode' then select * into e from public.cineo_episodes where id=c.target_id::bigint for update;select * into s from public.cineo_shows where id=e.show_id for update;if e.review_status<>'pending' or s.status<>'approved' or decision not in ('approved','rejected') then raise exception 'Capítulo não está em análise';end if;if decision='approved' and exists(select 1 from public.cineo_media_jobs where episode_id=e.id and status<>'ready') then raise exception 'Arquivo ainda não validado';end if;update public.cineo_episodes set review_status=decision,review_reason=case when decision='rejected' then note else '' end where id=e.id;if decision='approved' then perform public.cineo_notify(s.id,e.id);end if;
+ elsif c.kind='proposal' then select * into p from public.cineo_proposals where id=c.target_id::uuid for update;select * into s from public.cineo_shows where id=p.show_id for update;if p.status<>'pending' or s.status<>'approved' or decision not in ('approved','rejected') then raise exception 'Alteração indisponível';end if;patch=p.content->'patch';if decision='approved' then if exists(select 1 from jsonb_object_keys(patch) as x(key) where x.key in ('title','synopsis','genre','rating','cover_path','banner_path') and(p.content->'base'->x.key) is distinct from(to_jsonb(s)->x.key)) then raise exception 'A publicação mudou. Solicite uma proposta atualizada';end if;update public.cineo_shows set title=coalesce(patch->>'title',title),synopsis=coalesce(patch->>'synopsis',synopsis),genre=coalesce(patch->>'genre',genre),rating=coalesce(patch->>'rating',rating),cover_path=coalesce(patch->>'cover_path',cover_path),banner_path=coalesce(patch->>'banner_path',banner_path) where id=s.id;if patch?'themes' or patch?'warnings' or patch?'lifecycle' then
+ insert into public.cineo_show_info(show_id) values(s.id) on conflict do nothing;
+ update public.cineo_show_info set themes=case when patch?'themes' then array(select jsonb_array_elements_text(patch->'themes')) else themes end,warnings=case when patch?'warnings' then array(select jsonb_array_elements_text(patch->'warnings')) else warnings end,lifecycle=coalesce(patch->>'lifecycle',lifecycle) where show_id=s.id;
+ if patch?'lifecycle' then update public.cineo_shows set finished=(patch->>'lifecycle'='complete') where id=s.id;end if;end if;
+ end if;update public.cineo_proposals set status=decision,reason=note where id=p.id;
+ elsif c.kind='ticket' then if length(trim(note))<3 then raise exception 'Escreva a resposta';end if;update public.cineo_tickets set reply=note,status='closed' where id=c.target_id::bigint;
+ elsif c.kind='appeal' then if length(trim(note))<3 then raise exception 'Explique a reavaliação';end if;update public.cineo_appeals set reply=note,status='answered' where id=c.target_id::bigint;
+ elsif c.kind='report' then
+ if decision not in ('resolved','restore','dismissed') then raise exception 'Decisão inválida para denúncia';end if;
+ select * into reportrow from public.cineo_reports where id=c.target_id::bigint for update;
+ if reportrow.id is null then raise exception 'Denúncia não encontrada';end if;
+ if decision<>'dismissed' then
+ if reportrow.kind='show' then update public.cineo_shows set hidden=(decision='resolved') where id=reportrow.target_id;
+ elsif reportrow.kind='episode' then update public.cineo_episodes set hidden=(decision='resolved') where id=reportrow.target_id;
+ elsif reportrow.kind='comment' then update public.cineo_comments set hidden=(decision='resolved') where id=reportrow.target_id;else raise exception 'Conteúdo inválido';end if;end if;
+ update public.cineo_reports set status=case when decision='dismissed' then 'dismissed' else 'resolved' end where id=reportrow.id;
+ else raise exception 'Tipo de caso inválido';end if;
+ insert into public.cineo_case_actions(case_id,user_id,action,details) values(c.id,actor,decision,jsonb_build_object('note',note));update public.cineo_cases set status='resolved' where id=c.id;
+end$$;
+
+

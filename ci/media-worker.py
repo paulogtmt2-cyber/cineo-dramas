@@ -1,5 +1,5 @@
 """Private media processing using short-lived GitHub identity; no Supabase secrets in CI."""
-import os,json,urllib.request,urllib.parse,tempfile,subprocess,base64,pathlib,time
+import hashlib,os,json,urllib.request,urllib.parse,tempfile,subprocess,base64,pathlib,time
 BASE=os.environ.get('CINEO_API_BASE','https://njyjwcjrirqmbvsizqar.supabase.co/functions/v1/cineo')+'/v7/worker'
 def api(path,data):
     u=os.environ['ACTIONS_ID_TOKEN_REQUEST_URL']+'&audience=cineo-media'
@@ -32,7 +32,7 @@ def process(job):
         if not 0<duration<=14400:raise RuntimeError('Duração inválida ou superior a quatro horas.')
         # Decode the full source to detect damaged frames; missing audio is reported, not invented.
         run(['ffmpeg','-v','error','-xerror','-i',str(src),'-f','null','-'])
-        result={'ok':True,'duration':duration,'details':{'video':video.get('codec_name'),'has_audio':any(s['codec_type']=='audio' for s in streams),'width':video['width'],'height':video['height']}}
+        result={'ok':True,'duration':duration,'asset_sha256':hashlib.sha256(src.read_bytes()).hexdigest(),'details':{'video':video.get('codec_name'),'has_audio':any(s['codec_type']=='audio' for s in streams),'width':video['width'],'height':video['height']}}
         for name,width,rate in [('low',360,300000),('medium',720,900000)]:
             target=root/(name+'.mp4');budget=min(rate,int(22*1024*1024*8/duration)-64000)
             if budget<40000:continue
@@ -44,6 +44,7 @@ def process(job):
         return result
 if __name__=='__main__':
     api('/erasure',{})
+    api('/maintenance',{})
     completed=0
     while completed<4:
         job=api('/claim',{}).get('job')

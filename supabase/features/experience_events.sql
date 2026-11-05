@@ -1,0 +1,18 @@
+alter table public.cineo_uploads add column cancelled boolean not null default false;
+alter table public.cineo_tickets add column updated_at timestamptz not null default now();
+alter table public.cineo_release_news add column version_name text not null default '';
+create table public.cineo_request_budgets(user_id uuid not null references auth.users(id) on delete cascade,scope text not null,minute timestamptz not null,requests integer not null,primary key(user_id,scope,minute));
+alter table public.cineo_request_budgets enable row level security;revoke all on public.cineo_request_budgets from anon,authenticated;grant all on public.cineo_request_budgets to service_role;
+create function public.cineo_request_budget(actor uuid,bucket text,maximum integer) returns boolean language sql security invoker set search_path='' as $$with counter as(insert into public.cineo_request_budgets(user_id,scope,minute,requests) values(actor,bucket,date_trunc('minute',now()),1) on conflict(user_id,scope,minute) do update set requests=public.cineo_request_budgets.requests+1 returning requests)select requests<=maximum from counter$$;
+create function public.cineo_poll_results(pid uuid,actor uuid,vkey text) returns jsonb language sql stable security invoker set search_path='' as $$select jsonb_build_object('counts',(select jsonb_agg(n order by option) from(select option,count(v.user_id) as n from generate_series(0,cardinality(p.options)-1)option left join public.cineo_poll_votes v on v.poll_id=p.id and v.choice=option group by option)x),'mine',(select choice from public.cineo_poll_votes where poll_id=p.id and user_id=actor and viewer_key=vkey)) from public.cineo_polls p where p.id=pid$$;
+create function public.cineo_queue_case() returns trigger language plpgsql security invoker set search_path='' as $$declare case_kind text;eligible boolean:=true;begin
+ if tg_table_name='cineo_shows' then case_kind:='show';eligible:=new.status='pending';elsif tg_table_name='cineo_episodes' then case_kind:='episode';eligible:=new.review_status='pending';elsif tg_table_name='cineo_reports' then case_kind:='report';elsif tg_table_name='cineo_appeals' then case_kind:='appeal';elsif tg_table_name='cineo_tickets' then case_kind:='ticket';elsif tg_table_name='cineo_proposals' then case_kind:='proposal';end if;
+ if eligible then insert into public.cineo_cases(kind,target_id) values(case_kind,new.id::text) on conflict(kind,target_id) do update set status='open';end if;return new;end$$;
+create trigger cineo_show_case after insert or update of status on public.cineo_shows for each row execute function public.cineo_queue_case();
+create trigger cineo_episode_case after insert or update of review_status on public.cineo_episodes for each row execute function public.cineo_queue_case();
+create trigger cineo_report_case after insert on public.cineo_reports for each row execute function public.cineo_queue_case();
+create trigger cineo_appeal_case after insert on public.cineo_appeals for each row execute function public.cineo_queue_case();
+create trigger cineo_ticket_case after insert on public.cineo_tickets for each row execute function public.cineo_queue_case();
+create trigger cineo_proposal_case after insert on public.cineo_proposals for each row execute function public.cineo_queue_case();
+revoke all on function public.cineo_request_budget(uuid,text,integer),public.cineo_poll_results(uuid,uuid,text),public.cineo_queue_case() from public,anon,authenticated;
+grant execute on function public.cineo_request_budget(uuid,text,integer),public.cineo_poll_results(uuid,uuid,text),public.cineo_queue_case() to service_role;

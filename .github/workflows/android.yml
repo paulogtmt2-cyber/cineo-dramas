@@ -42,7 +42,7 @@ jobs:
         run: node --experimental-strip-types --test ci/test_platform.mjs
       - name: Verify public API boundaries
         env:
-          CINEO_TEST_API: https://njyjwcjrirqmbvsizqar.supabase.co/functions/v1/cineo
+          CINEO_TEST_API: https://njyjwcjrirqmbvsizqar.supabase.co/functions/v1/cineo-preview
         run: python3 ci/api-smoke.py
       - name: Enable KVM
         run: |

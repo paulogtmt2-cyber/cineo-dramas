@@ -1,0 +1,37 @@
+-- All fixtures and state changes are rolled back; no published series is edited.
+begin;
+do $$declare actor uuid;other uuid;sid bigint;e1 bigint;e2 bigint;cid uuid;pid uuid;rid bigint;v jsonb;blocked boolean:=false;begin
+ select user_id into actor from public.cineo_admins limit 1;
+ select owner_id into other from public.cineo_shows where owner_id<>actor limit 1;
+ if actor is null or other is null then raise exception 'Two existing account fixtures are required';end if;
+ insert into public.cineo_shows(owner_id,title,synopsis,genre,rating) values(actor,'Conferência temporária','Produção técnica descartada ao terminar.','Drama','Livre') returning id into sid;
+ insert into public.cineo_episodes(show_id,title,storage_path,season,episode_number,duration_seconds,review_status,media_state) values(sid,'Um','test/rollback-one.mp4',1,1,20,'approved','ready') returning id into e1;
+ insert into public.cineo_episodes(show_id,title,storage_path,season,episode_number,duration_seconds,review_status,media_state) values(sid,'Dois','test/rollback-two.mp4',1,2,20,'approved','ready') returning id into e2;
+ update public.cineo_media_jobs set status='ready' where episode_id in(e1,e2);
+ perform public.cineo_reorder_chapters(actor,sid,1,array[e2,e1]);
+ if(select episode_number from public.cineo_episodes where id=e2)<>1 then raise exception 'Reorder failed';end if;
+ perform public.cineo_sync_playback(actor,null,e1,10000,20000,false,now());
+ v:=public.cineo_sync_playback(actor,null,e1,1000,20000,false,now()-interval '10 minutes');
+ if(v->>'applied')::boolean or(select position_ms from public.cineo_progress where user_id=actor and episode_id=e1)<>10000 then raise exception 'Old progress replaced new progress';end if;
+ update public.cineo_shows set status='pending' where id=sid;
+ select id into cid from public.cineo_cases where kind='show' and target_id=sid::text;
+ insert into public.cineo_staff(user_id,role,name) values(other,'reviewer','Equipe de teste') on conflict(user_id) do update set role='reviewer';
+ begin perform public.cineo_decide_case(other,cid,'approved','Teste');exception when others then blocked:=true;end;
+ if not blocked then raise exception 'Unassigned reviewer was allowed';end if;
+ update public.cineo_cases set assignee=other where id=cid;
+ perform public.cineo_decide_case(other,cid,'approved','Conferido');
+ insert into public.cineo_proposals(show_id,user_id,content) select sid,actor,jsonb_build_object('base',to_jsonb(s),'patch',jsonb_build_object('title','Ficha revisada','themes',jsonb_build_array('família'),'lifecycle','complete')) from public.cineo_shows s where id=sid returning id into pid;
+ if(select title from public.cineo_shows where id=sid)<>'Conferência temporária' then raise exception 'Pending changes leaked publicly';end if;
+ select id into cid from public.cineo_cases where kind='proposal' and target_id=pid::text;
+ perform public.cineo_decide_case(actor,cid,'approved','Conferida');
+ if(select title from public.cineo_shows where id=sid)<>'Ficha revisada' or(select lifecycle from public.cineo_show_info where show_id=sid)<>'complete' then raise exception 'Approved proposal not applied';end if;
+ insert into public.cineo_reports(user_id,kind,target_id,reason) values(actor,'show',sid,'Conferência técnica') returning id into rid;
+ select id into cid from public.cineo_cases where kind='report' and target_id=rid::text;
+ perform public.cineo_decide_case(actor,cid,'resolved','Conferida');
+ if not(select hidden from public.cineo_shows where id=sid)then raise exception 'Resolved report failed to hide';end if;
+ update public.cineo_cases set status='open' where id=cid;
+ perform public.cineo_decide_case(actor,cid,'restore','Recurso conferido');
+ if(select hidden from public.cineo_shows where id=sid)then raise exception 'Report restoration failed';end if;
+end$$;
+select public.cineo_restore_metadata(public.cineo_backup_snapshot(),false)->>'ok' as recovery_probe;
+rollback;

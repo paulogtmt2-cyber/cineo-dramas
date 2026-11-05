@@ -31,6 +31,22 @@ public class ScreenTest {
   ByteArrayOutputStream artBytes=new ByteArrayOutputStream();try(InputStream in=a.getResources().openRawResource(R.drawable.cinema_login)){byte[] b=new byte[8192];int n;while((n=in.read(b))!=-1)artBytes.write(b,0,n);}final String artwork=android.util.Base64.encodeToString(artBytes.toByteArray(),2);
   java.util.concurrent.atomic.AtomicInteger posted=new java.util.concurrent.atomic.AtomicInteger();
   ui(()->{a.token="test-ui-only";a.uid="ui-fixture";a.email="criador@example.test";a.role="admin";a.expires=Long.MAX_VALUE;a.transport=(method,path,payload,bearer)->{
+   if(path.startsWith("/v8/bootstrap"))return a.obj("shortcuts",new JSONArray(),"staff","admin","workspace",true,"pending_reviews",0,"open_tickets",0,"notices",new JSONArray(),"watch_minutes",0,"orientation","auto","sensitive_swipe",false);
+   if(path.equals("/v8/preferences"))return a.obj("revision",1,"watch_minutes",0,"orientation","auto","sensitive_swipe",false,"hide_completed",false);
+   if(path.startsWith("/v8/library")||path.equals("/v8/recommendations")||path.startsWith("/v8/search"))return a.obj("items",new JSONArray().put(new JSONObject(show.toString()).put("remaining_seconds",80).put("recommendation_reason","Porque você escolheu Drama")),"next",JSONObject.NULL);
+   if(path.equals("/v8/studio"))return a.obj("counts",a.obj("productions",1,"pending",0,"queued",0),"jobs",new JSONArray(),"items",new JSONArray().put(draft));
+   if(path.startsWith("/v8/drafts"))return a.obj("revision",1,"content",new JSONObject());
+   if(path.equals("/v8/desk/home"))return a.obj("staff","admin","counts",a.obj("show",1),"total",1,"items",new JSONArray());
+   if(path.startsWith("/v8/desk/cases"))return a.obj("items",new JSONArray());
+   if(path.equals("/v8/desk/staff")||path.equals("/v8/desk/templates"))return a.obj("items",new JSONArray());
+   if(path.equals("/v8/ops/rollouts"))return a.obj("flags",new JSONArray().put(a.obj("name","workspace","description","Novo perfil","percentage",100)),"versions",new JSONArray());
+   if(path.equals("/v8/ops/quality"))return a.obj("samples",0,"startup_average_ms",0,"stalls",0,"stall_ms",0,"storage",new JSONArray());
+   if(path.startsWith("/v8/ops/"))return a.obj("items",new JSONArray(),"scope","Metadados. Sem vídeos, senhas ou sessões.");
+   if(path.equals("/v8/inbox"))return a.obj("groups",new JSONArray(),"items",new JSONArray(),"unread",0);
+   if(path.endsWith("/recap"))return a.obj("recap","");
+   if(path.equals("/v8/progress")||path.equals("/v8/quality")||path.equals("/v8/library-choice"))return a.obj("ok",true);
+   if(path.startsWith("/v8/show/")&&path.endsWith("/info"))return a.obj("themes",new JSONArray(),"warnings",new JSONArray(),"lifecycle","ongoing");
+   if(path.startsWith("/v8/"))return a.obj("items",new JSONArray());
    if(path.equals("/v7/home"))return a.obj("featured",new JSONArray().put(show),"latest",new JSONArray().put(show),"marathon",new JSONArray().put(show),"top",new JSONArray().put(show),"upcoming",new JSONArray());
    if(path.equals("/guest"))return a.obj("items",new JSONArray().put(show));
    if(path.equals("/v7/viewers"))return a.obj("items",new JSONArray().put(a.obj("id","viewer-fixture","name","Paulo","kids",false,"max_rating",18)),"pin_set",false);
@@ -180,6 +196,17 @@ public class ScreenTest {
   ui(()->a.studioTools.health());capture("71-platform-health");
   ui(()->{a.activeShow=show;a.playingEpisode=99;try{a.discussions.open(a.obj("id",1,"author_name","Espectador"));}catch(Exception ex){throw new RuntimeException(ex);}});capture("72-comment-conversation");ui(()->a.discussions.close());
   ui(()->{String before=a.local("episode_99");a.viewerId="viewer-fixture";assertFalse("Viewer cache must be isolated",before.equals(a.local("episode_99")));a.viewerId="";a.prefs.edit().putBoolean(a.local("high_contrast"),true).apply();assertEquals("Contrast preference changes muted text",0xffdfe7f1,a.label("Teste",14,MainActivity.MUTED).getCurrentTextColor());a.prefs.edit().putBoolean(a.local("high_contrast"),false).apply();});
+  ui(()->a.dashboard.show(0,""));capture("73-profile-library");
+  ui(()->{android.view.View admin=a.body.findViewWithTag("workspace-admin");assertNotNull("Administrator entry must be visible",admin);int[] point=new int[2],nav=new int[2];admin.getLocationOnScreen(point);a.root.getChildAt(a.root.getChildCount()-1).getLocationOnScreen(nav);assertTrue("All six shortcuts and administration fit without scrolling",point[1]+admin.getHeight()<=nav[1]);assertNull("Account email stays private on the profile",find(a.body,a.email));assertNotNull(find(a.body,"Downloads"));});
+  ui(()->a.dashboard.show(1,""));capture("74-profile-studio");ui(()->assertNotNull(find(a.body,"Nova produção")));
+  ui(()->a.dashboard.show(2,""));capture("75-profile-account");ui(()->assertNotNull(find(a.body,"Segurança")));
+  ui(()->a.dashboard.show(2,"senha"));capture("76-tool-search");ui(()->assertNotNull(find(a.body,"Segurança")));
+  ui(()->a.libraryHub.open("completed"));capture("77-library-tabs");ui(()->a.libraryHub.tonight());capture("78-finish-tonight");
+  ui(()->a.libraryHub.bookmarks());capture("79-scene-library");ui(()->a.libraryHub.calendar());capture("80-personal-calendar");ui(()->a.libraryHub.inbox());capture("81-grouped-inbox");ui(()->a.libraryHub.viewingSettings());capture("82-time-gestures");ui(()->a.libraryHub.recommendationSettings());capture("83-recommendation-control");ui(()->a.libraryHub.surveys());capture("84-satisfaction");ui(()->a.libraryHub.news());capture("85-release-news");
+  ui(()->a.creatorHub.home());capture("86-creator-overview");ui(()->a.creatorHub.production(draft));capture("87-production-tools");ui(()->a.creatorHub.wizard(null,0));capture("88-wizard-story");
+  ui(()->{a.creatorHub.put("title","Rascunho recuperável");a.creatorHub.put("synopsis","Uma história preparada para voltar mais tarde.");a.creatorHub.wizard(null,1);});capture("89-wizard-identity");ui(()->a.creatorHub.wizard(null,2));capture("90-wizard-preview");ui(()->assertNotNull(find(a.body,"Rascunho recuperável")));
+  ui(()->a.creatorHub.proposals(show));capture("91-production-revisions");ui(()->a.creatorHub.createPoll(show));capture("92-new-poll");ui(()->a.creatorHub.cleanup());capture("93-temporary-cleanup");ui(()->a.creatorHub.teamHub());capture("94-team-code");
+  ui(()->a.moderationDesk.home());capture("95-team-overview");ui(()->a.moderationDesk.cases("show","open"));capture("96-assigned-cases");ui(()->a.moderationDesk.staff());capture("97-platform-staff");ui(()->a.moderationDesk.templates());capture("98-decision-templates");ui(()->a.operations.home());capture("99-platform-controls");ui(()->a.operations.notices());capture("100-app-notices");ui(()->a.operations.surveys());capture("101-survey-results");ui(()->a.operations.rollouts());capture("102-release-rollouts");ui(()->a.operations.quality());capture("103-playback-quality");ui(()->a.operations.backups());capture("104-encrypted-backups");
   ui(()->{a.clearSession();a.login(false);});
  }
 }

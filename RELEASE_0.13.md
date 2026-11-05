@@ -14,7 +14,7 @@ Após a liberação, o estúdio mostra as produções por situação, com botão
 
 Rascunho de ficha é recuperável no mesmo aparelho; imagens ainda não enviadas ficam em cache e podem precisar de nova seleção se o Android limpar o cache. Identificador por rascunho evita criar uma nova produção a cada tentativa de salvamento. Uploads continuam exigindo aplicativo aberto e MP4 de até 25 MB por arquivo; o limite de capítulos não amplia a cota de armazenamento do projeto.
 
-Novos capítulos de séries já publicadas podem ser enviados em conjunto para análise, sem retirar os capítulos anteriores do ar. Séries enviadas à análise ficam bloqueadas para edição. Recusa mantém o motivo e permite corrigir e reenviar. Não há limite artificial de número de séries por criador ativo, respeitando as cotas do serviço e as regras de publicação.
+Novos capítulos de séries já publicadas podem ser enviados em conjunto para análise, sem retirar os capítulos anteriores do ar. Séries enviadas à análise ficam bloqueadas para edição. Envios incompletos podem ser cancelados no estúdio; a finalização trava o envio e marca o capítulo concluído na mesma transação, preservando arquivos já concluídos. Recusa mantém o motivo e permite corrigir e reenviar. Não há limite artificial de número de séries por criador ativo, respeitando as cotas do serviço e as regras de publicação.
 
 ## Administração
 
@@ -26,4 +26,4 @@ Missões, visualizações elegíveis, bônus e saques da versão 0.12 permanecem
 
 ## Validação
 
-52 testes Node passaram. Testes SQL de rascunho idempotente, permissão, direitos, mídia, envio direto para o painel, recusa/reenvio/aprovação, suspensão, novos capítulos e limite de 1.000 foram concluídos com rollback, sem publicar arquivos ou gerar pagamentos de teste persistentes. Compilação, testes Android e publicação ainda pendentes.
+53 testes Node passaram. Testes SQL de rascunho idempotente, permissão, direitos, mídia, envio direto para o painel, recusa/reenvio/aprovação, suspensão, novos capítulos e limite de 1.000 foram concluídos com rollback, sem publicar arquivos ou gerar pagamentos de teste persistentes. Compilação, testes Android e publicação ainda pendentes.

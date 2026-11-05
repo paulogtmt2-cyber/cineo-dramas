@@ -259,7 +259,7 @@ public class ScreenTest {
   ui(()->a.launch.clipForm(show));capture("149-clip-curation-form");ui(()->a.launch.curation());capture("150-clip-curation");ui(()->a.launch.health());capture("151-clip-integrity");ui(()->a.launch.history());capture("152-admin-history");ui(()->a.launch.simulator());capture("153-local-test-simulator");
   ui(()->{a.launch.reset();a.launch.open();});ready(a);capture("154-clips-first-episode");ui(()->{assertTrue(a.launch.active());assertEquals(0,a.launch.index);assertNotNull(find(a.root,"  Assistir à série completa  ›"));a.video.pause();});
   vertical(a,true);ready(a);capture("155-clips-next-series");ui(()->{assertEquals("Swipe opens a different series rather than episode 2",1,a.launch.index);assertEquals(2,a.activeShow.optInt("id"));});
-  vertical(a,false);ready(a);ui(()->{assertEquals(0,a.launch.index);a.video.pause();a.video.seekTo(5000);});Thread.sleep(400);ui(()->a.launch.series());settled();capture("156-clips-open-full-series");ui(()->{assertEquals("detail",a.screen);assertEquals("clips",a.currentOrigin);assertTrue("Progress survives opening series",a.prefs.getInt(a.local("episode_11"),0)>=4000);a.origin("clips");});ready(a);ui(()->assertTrue(a.launch.active()));
+  vertical(a,false);ready(a);ui(()->{assertEquals(0,a.launch.index);a.video.pause();a.video.seekTo(5000);});Thread.sleep(400);ui(()->a.launch.series());settled();capture("156-clips-open-full-series");ui(()->{assertEquals("detail",a.screen);assertEquals("clips",a.currentOrigin);assertTrue("Progress survives opening series",a.prefs.getInt(a.local("episode_11"),0)>=4000);a.origin("clips");});ready(a);ui(()->{assertTrue(a.launch.active());a.back.run();assertEquals("home",a.screen);});
   ui(()->{a.clearSession();a.login(false);});
  }
 }

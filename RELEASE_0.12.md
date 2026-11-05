@@ -24,4 +24,4 @@ O simulador é local, identificado e não cria contas, engajamento público ou c
 
 ## Validação
 
-43 testes Node e cenários transacionais com rollback passaram (publicação, agendamento, repetição, suspensão, orçamento, bônus, reserva e cancelamento). Compilação Android, 156 capturas previstas, homologação e APK final ainda pendentes.
+44 testes Node e cenários transacionais com rollback passaram (publicação, agendamento, repetição, suspensão, orçamento, bônus, reserva e cancelamento). Compilação Android, 156 capturas previstas, homologação e APK final ainda pendentes.

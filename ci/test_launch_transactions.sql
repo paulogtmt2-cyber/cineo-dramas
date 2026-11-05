@@ -1,6 +1,6 @@
 -- Uses existing users only as FK anchors; all changes roll back, no money is transferred.
 begin;
-do $$declare owner uuid;admin_id uuid;sid bigint;eid bigint;future_id bigint;baseline bigint;reward bigint;rid uuid:=gen_random_uuid();envelope jsonb:='{"iv":"fixture","ciphertext":"fixture"}';rules_revision integer;request_id uuid;begin
+do $$declare owner uuid;admin_id uuid;sid bigint;second_sid bigint;eid bigint;future_id bigint;baseline bigint;reward bigint;rid uuid:=gen_random_uuid();envelope jsonb:='{"iv":"fixture","ciphertext":"fixture"}';rules_revision integer;request_id uuid;begin
  select user_id into admin_id from public.cineo_admins limit 1;
  select id into owner from auth.users where id<>admin_id and not exists(select 1 from public.cineo_mission_members m where m.creator_id=id) limit 1;
  if owner is null then raise exception 'Need non-admin fixture account';end if;
@@ -30,15 +30,19 @@ do $$declare owner uuid;admin_id uuid;sid bigint;eid bigint;future_id bigint;bas
  if public.cineo_reward_balance(owner)<>baseline+152 then raise exception 'Budget exceeded';end if;
  update public.cineo_mission_program set budget_cents=null where id=1;perform public.cineo_sync_missions(owner);
  if public.cineo_reward_balance(owner)<>baseline+153 then raise exception 'Budget hold did not release';end if;
+ insert into public.cineo_shows(owner_id,title,synopsis,status) values(owner,'Second mission fixture','Second fixture','draft') returning id into second_sid;
+ insert into public.cineo_episodes(show_id,title,storage_path,season,episode_number,review_status,media_state) values(second_sid,'Second series first episode','mission-fixture/'||gen_random_uuid()||'.mp4',1,1,'approved','ready');
+ update public.cineo_shows set status='approved' where id=second_sid;
+ if public.cineo_reward_balance(owner)<>baseline+154 then raise exception 'First series reward repeated across productions';end if;
  begin perform public.cineo_grant_bonus(owner,owner,500,rid,'Unauthorized fixture');raise exception 'UNAUTHORIZED_BONUS';exception when others then if sqlerrm='UNAUTHORIZED_BONUS' then raise;end if;end;
  perform public.cineo_grant_bonus(admin_id,owner,500,rid,'Fixture launch incentive');perform public.cineo_grant_bonus(admin_id,owner,500,rid,'Fixture launch incentive');
- if public.cineo_reward_balance(owner)<>baseline+653 then raise exception 'Bonus was duplicated';end if;
- if (public.cineo_studio_finance(owner)->>'available_cents')::bigint<>baseline+653 then raise exception 'Finance excludes rewards';end if;
+ if public.cineo_reward_balance(owner)<>baseline+654 then raise exception 'Bonus was duplicated';end if;
+ if (public.cineo_studio_finance(owner)->>'available_cents')::bigint<>baseline+654 then raise exception 'Finance excludes rewards';end if;
  update public.cineo_payout_rules set enabled=true,minimum_cents=1,terms='Fixture rewards withdrawal rules',revision=revision+1 where id=1 returning revision into rules_revision;
- request_id:=(public.cineo_request_withdrawal(owner,baseline+653,envelope,'fixture',rules_revision)->>'id')::uuid;
+ request_id:=(public.cineo_request_withdrawal(owner,baseline+654,envelope,'fixture',rules_revision)->>'id')::uuid;
  if public.cineo_reward_balance(owner)<>0 then raise exception 'Rewards not reserved';end if;
  begin perform public.cineo_request_withdrawal(owner,1,envelope,'fixture',rules_revision);raise exception 'DOUBLE_REWARD_WITHDRAWAL';exception when others then if sqlerrm='DOUBLE_REWARD_WITHDRAWAL' then raise;end if;end;
  perform public.cineo_review_withdrawal(owner,request_id,'cancelled','Fixture cancelled','');
- if public.cineo_reward_balance(owner)<>baseline+653 then raise exception 'Cancellation did not free rewards';end if;
+ if public.cineo_reward_balance(owner)<>baseline+654 then raise exception 'Cancellation did not free rewards';end if;
 end$$;
 rollback;

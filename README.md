@@ -1,10 +1,10 @@
-# Cineo / Dramas — Android 0.12
+# Cineo / Dramas — Android 0.13
 
 Aplicativo Android nativo em português para assistir e publicar séries, novelas e mini dramas independentes. O catálogo mostra apenas produções aprovadas. O backend ativo é a Edge Function `cineo` do Supabase; o servidor Python na pasta `backend` é um protótipo anterior e não é necessário para este APK.
 
 ## Versão atual
 
-A versão 0.12 acrescenta Clipes com primeiros episódios e acesso à série completa, missões de publicação (R$ 1,50 pela primeira série elegível e R$ 0,01 por episódio), bônus identificados, curadoria e verificação com histórico. Consulte [RELEASE_0.12.md](RELEASE_0.12.md) e [RELEASE_0.11.md](RELEASE_0.11.md) para o escopo atual, critérios e limites. Bônus são financiados pela administração; pagamentos externos continuam manuais. O programa começa habilitado com as tarifas solicitadas e sem teto definido, configurável no painel. Saques mantêm suas regras independentes.
+A versão 0.13 organiza o cadastro e o estúdio do criador, a publicação em três etapas (ficha, até mil capítulos, ferramentas opcionais) e a administração em seis áreas com gráfico e filas paginadas. Consulte [RELEASE_0.13.md](RELEASE_0.13.md) para os critérios, validação e limites. As funções anteriores de [RELEASE_0.12.md](RELEASE_0.12.md) e [RELEASE_0.11.md](RELEASE_0.11.md) permanecem disponíveis. As missões de lançamento começam habilitadas com as tarifas solicitadas e sem teto definido, configurável no painel; bônus são financiados pela administração, e pagamentos externos continuam manuais. Saques mantêm suas regras independentes.
 
 Os tópicos abaixo incluem o histórico das versões anteriores; os documentos de release atuais prevalecem sobre limitações antigas.
 

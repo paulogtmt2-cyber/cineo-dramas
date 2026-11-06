@@ -1,6 +1,6 @@
 # Cineo 0.13 — criação em etapas e painel administrativo
 
-Estado: em validação. Nenhum APK 0.13 foi publicado ainda.
+Estado: publicado e verificado.
 
 ## Criadores
 
@@ -26,4 +26,23 @@ Missões, visualizações elegíveis, bônus e saques da versão 0.12 permanecem
 
 ## Validação
 
-53 testes Node passaram. Testes SQL de rascunho idempotente, permissão, direitos, mídia, envio direto para o painel, recusa/reenvio/aprovação, suspensão, novos capítulos e limite de 1.000 foram concluídos com rollback, sem publicar arquivos ou gerar pagamentos de teste persistentes. Compilação, testes Android e publicação ainda pendentes.
+53 testes Node passaram. Testes SQL de rascunho idempotente, permissão, direitos, mídia, envio direto para o painel, recusa/reenvio/aprovação, suspensão, novos capítulos e limite de 1.000 foram concluídos com rollback, sem publicar arquivos ou gerar pagamentos de teste persistentes. Compilação e regressão Android passaram com 170 capturas e 13 verificações de cache. Onze consultas autenticadas passaram na homologação. A implantação de produção utiliza o mesmo bundle validado; uma rodada adicional de consultas autenticadas em produção foi interrompida pelo ambiente antes de gerar resultado, portanto não é contabilizada como concluída.
+
+
+Commit Android validado: `e9e42aadc861f577d284172d70d60e3c6f25ca4d`.
+CI: https://github.com/paulogtmt2-cyber/cineo-dramas/actions/runs/42112039897.
+Servidor cineo v20: bundle `ae7177131cce5382453ab8b9f93d1301d34748adf2f7c42727d53db7a994529a`.
+O ajuste final de cancelamento por titular/colaborador foi validado nos 53 testes Node locais e na implantação da função; não altera o binário Android já testado.
+APK: 6.004.377 bytes; SHA-256 `61bbd163351e989625b5dab59b56b4f54dd156074257edbed017438bbcb8001c`.
+Certificado SHA-256: `b5755f77ddaa869b456d7134296947773cc1c89b217c7933841ffe54c487bc0e`, igual ao das versões recentes.
+
+## Acesso
+
+Criador: Estúdio na barra inferior ou Perfil → Estúdio → Quero ser criador. Após liberação, + → Ficha → Capítulos → Ferramentas → Mandar produção para análise.
+Administrador: Perfil → Administração → Análises → Produções em análise. Resumo, Análises, Criadores, Financeiro, Catálogo e Sistema ficam sempre visíveis.
+
+## Download
+
+https://njyjwcjrirqmbvsizqar.supabase.co/storage/v1/object/public/cineo-app/Cineo_Dramas_0.13.0.apk
+
+O download público foi conferido por SHA-256 e o endpoint de atualização anuncia version_code 13.
